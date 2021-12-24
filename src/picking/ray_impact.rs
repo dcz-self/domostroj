@@ -34,6 +34,13 @@ impl VoxelCursorRayImpact {
             normal: *normal,
         })
     }
+
+    /// Returns the voxel from which the impact originates.
+    pub fn get_neighoring_voxel(&self) -> Option<Point3i> {
+        self.get().map(|(impact, normal)| {
+            impact.point + normal.get_vector()
+        })
+    }
 }
 
 /// Each frame, a ray is cast at the `VoxelBvt`, and the resulting impact is stored.
