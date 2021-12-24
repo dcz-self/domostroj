@@ -1,6 +1,7 @@
 use super::SelectionState;
 
 use crate::{geometry::offset_transform, ImmediateModeTag, VoxelCursorRayImpact};
+use crate::geometry::Point3f;
 
 use bevy::{
     asset::prelude::*,
@@ -11,6 +12,9 @@ use bevy::{
         pipeline::PrimitiveTopology,
         prelude::*,
     },
+};
+use feldspar::{
+    bb::core::prelude::*,
 };
 use feldspar::bb::mesh::{OrientedCubeFace, PosNormMesh, UnorientedQuad};
 
@@ -89,7 +93,7 @@ fn create_quad_selection_hint_entity(
         .spawn_bundle(create_single_quad_mesh_bundle(
             &face, &quad, material, meshes,
         ))
-        .insert(offset_transform(face.mesh_normal() * HOVER_DISTANCE))
+        .insert(offset_transform(1.0 * Point3f::from(quad.minimum)))
         .insert(ImmediateModeTag)
         .id()
 }
@@ -103,7 +107,7 @@ fn create_single_quad_mesh_bundle(
     meshes: &mut Assets<Mesh>,
 ) -> PbrBundle {
     let mut mesh = PosNormMesh::default();
-    face.add_quad_to_pos_norm_mesh(quad, 1.0, &mut mesh);
+    face.add_quad_to_pos_norm_mesh(&UnorientedQuad::from_voxel(PointN([0, 0, 0])), 1.0, &mut mesh);
 
     let num_vertices = mesh.positions.len();
 
