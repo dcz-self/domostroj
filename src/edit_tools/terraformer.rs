@@ -16,7 +16,7 @@ pub struct Terraformer {
 impl Default for Terraformer {
     fn default() -> Self {
         Self {
-            edit_radius: 1,
+            edit_radius: 10,
             voxel_type: VoxelType(1),
             dist_from_camera: None,
         }
