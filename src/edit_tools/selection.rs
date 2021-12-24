@@ -1,4 +1,5 @@
 mod controller;
+mod pick_view;
 mod plugin;
 mod view;
 
