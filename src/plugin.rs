@@ -187,7 +187,7 @@ fn create_lights(commands: &mut Commands) {
 }
 
 fn initialize_camera(commands: &mut Commands, camera_config: CameraConfig) {
-    let eye = Vec3::new(100.0, 100.0, 100.0);
-    let target = Vec3::new(0.0, 0.0, 0.0);
+    let eye = Vec3::new(40.0, 20.0, 40.0);
+    let target = Vec3::new(20.0, 0.0, 20.0);
     create_camera_entity(commands, camera_config, eye, target);
 }
