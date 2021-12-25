@@ -1,6 +1,7 @@
 use super::SelectionState;
 
 use crate::{geometry::offset_transform, ImmediateModeTag, VoxelCursorRayImpact};
+use crate::edit_tools::VOXEL_WIDTH;
 
 use bevy::{
     asset::prelude::*,
@@ -18,9 +19,6 @@ use feldspar::{
     bb::core::prelude::*,
 };
 use feldspar::bb::mesh::{OrientedCubeFace, PosNormMesh, UnorientedQuad};
-
-
-const VOXEL_WIDTH: f32 = 1.0;
 
 
 pub struct SelectionTag;

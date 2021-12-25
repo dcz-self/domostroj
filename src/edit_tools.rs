@@ -2,6 +2,7 @@ mod drag_face;
 mod edit_timeline;
 mod plugin;
 mod selection;
+mod slicing;
 mod snapshotting_editor;
 mod terraformer;
 mod tool_switcher;
@@ -15,10 +16,16 @@ use snapshotting_editor::SnapshottingVoxelEditor;
 pub enum CurrentTool {
     DragFace(DragFaceState),
     Terraform,
+    Slice,
     PaintMaterial, // TODO
     Tile,          // TODO: tile the current buffer by dragging; replaces DragFace
     Slope,         // TODO: select two edges to slope between
 }
+
+
+/// I don't really know where to put this. It should be in feldspar.
+const VOXEL_WIDTH: f32 = 1.0;
+
 
 // TODO: 3D selection; like the drag face tool, but you drag to size the 3rd dimension of the
 // selection. Move the selection by dragging a face. Allow visibility masking so you can only see
