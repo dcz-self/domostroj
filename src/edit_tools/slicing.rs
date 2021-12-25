@@ -1,6 +1,6 @@
 /*! Slicing mode: insert voxels on the specified plane only, hide anything that's above. */
 
-mod user;
+pub mod user;
 
 use crate::{geometry::offset_transform, CursorRay};
 use crate::edit_tools::{VOXEL_WIDTH, CurrentTool};
@@ -35,7 +35,7 @@ pub struct SlicingHint;
 /// The vertical index of the voxel,
 /// which should be replaced,
 /// and above which voxels should be made invisible.
-pub struct SliceHeight(i32);
+pub struct SliceHeight(pub i32);
 
 /* from Cobble */
 pub fn update_slicing_hint(
@@ -62,7 +62,7 @@ pub fn update_slicing_hint(
 
             let intersection = ray_plane_intersection(&ray, &plane);
             if let RayPlaneIntersection::SinglePoint(point) = intersection {
-                let voxel = PointN([point.x, point.y, point.z]);
+                let voxel = PointN([point.x as i32, point.y as i32, point.z as i32]);
 
                 *transform = Transform {
                     scale: Vec3::new(1.0, 1.0 * slice_height.0 as f32, 1.0),
