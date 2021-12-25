@@ -23,6 +23,9 @@ use feldspar::{
 };
 
 
+/// How far the hint box should extend towards the bottom.
+const HINT_ANCHOR: f32 = -256.0;
+
 /// A level indicator.
 /// Like a water level marker on a river.
 /// Extends from the bottom, and ends on the specified plane.
@@ -47,12 +50,13 @@ pub fn update_slicing_hint(
         With<SlicingHint>,
     >,
 ) {
-    if let CurrentTool::Slice = *current_tool {
-    } else {
-        return;
-    }
-
     if let Ok((mut draw, mut transform)) = hint.single_mut() {
+        if let CurrentTool::Slice = *current_tool {
+        } else {
+            draw.is_visible = false;
+            return;
+        }
+        
         draw.is_visible = if let CursorRay(Some(ray)) = *cursor_ray {
             // Everything past this point happens in the voxel coord system.
             let plane = Plane {
@@ -64,9 +68,13 @@ pub fn update_slicing_hint(
             if let RayPlaneIntersection::SinglePoint(point) = intersection {
                 let voxel = PointN([point.x as i32, point.y as i32, point.z as i32]);
 
+                let selection_layer_top = (slice_height.0 + 1) as f32 * VOXEL_WIDTH;
+                let hint_height = selection_layer_top - HINT_ANCHOR;
+                let voxel_position = VOXEL_WIDTH * Point3f::from(voxel);
+                let hint_offset = PointN([voxel_position.x(), HINT_ANCHOR, voxel_position.z()]);
                 *transform = Transform {
-                    scale: Vec3::new(1.0, 1.0 * slice_height.0 as f32, 1.0),
-                    ..offset_transform(VOXEL_WIDTH * Point3f::from(voxel))
+                    scale: Vec3::new(1.0, hint_height, 1.0),
+                    ..offset_transform(hint_offset)
                 };
                 true
             } else {
