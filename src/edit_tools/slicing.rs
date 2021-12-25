@@ -41,6 +41,17 @@ pub struct SlicingHint;
 pub struct SliceHeight(pub i32);
 
 /* from Cobble */
+/// The SliceHeight specifies the bottom of the voxel layer.
+/// This places the hint where the cursor lies on the bottom of the voxel layer.
+/// This looks cool if the layer is unoccupied: it's as if the plane was the floor.
+/// But if the layer of voxels is occupied, they obscure the "floor",
+/// so the cursor points at something below/inside the cube.
+/// This is rather uncomforatble to use.
+///
+/// Solution 1: Use actual ray tracing to hit the voxel on its top or side if occupied.
+/// This solution is a bunch of work though, obscures voxels.
+/// Solution 2: Use a hint that's always visible, even if inside the mesh.
+/// How to modify Z-order though?
 pub fn update_slicing_hint(
     cursor_ray: Res<CursorRay>,
     current_tool: Res<CurrentTool>,
