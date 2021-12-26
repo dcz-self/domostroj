@@ -90,26 +90,9 @@ fn edit_voxel(
     };
     voxel_editor.edit_extent_and_touch_neighbors(
         unit_extent(center),
-        |p: Point3i, (v_type, v_dist): (&mut VoxelType, &mut Sd8)| {
-            // SDF calculation is possibly broken. Stolen from terraformer.
-            let p_radius = (p - center).norm();
-
-            // Change the SDF faster closer to the center.
-            const SDF_GROWTH_FACTOR: f32 = 20.0;
-            let sdf_delta = sign
-                * (SDF_GROWTH_FACTOR * (1.0 - p_radius))
-                    .max(0.0)
-                    .round() as i16;
-            let new_dist = v_dist.0 as i16 + sdf_delta;
-
-            v_dist.0 = new_dist.max(std::i8::MIN as i16).min(std::i8::MAX as i16) as i8;
-
-            if sdf_delta < 0 && v_dist.0 < 0 {
-                // Only set to the brush type if the voxel is solid.
-                *v_type = voxel_type;
-            } else if sdf_delta > 0 && v_dist.0 >= 0 {
-                *v_type = VoxelType::EMPTY;
-            }
+        |p: Point3i, (v_type, _v_dist): (&mut VoxelType, &mut Sd8)| {
+            *v_type = voxel_type;
+            // maybe TODO: SDF calculation.
         },
     );
 }

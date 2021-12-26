@@ -29,10 +29,13 @@ features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"]
 git = "https://github.com/bonsairobo/feldspar"
 # branch = "main"
 rev = "e09001c1"
-# path = "../feldspar"
 
 [dependencies.smooth-bevy-cameras]
 git = "https://github.com/bonsairobo/smooth-bevy-cameras"
 rev = "8782b98"
 # branch = "main"
 # path = "../smooth-bevy-cameras"
+
+
+[patch.'https://github.com/bonsairobo/feldspar']
+feldspar = { path = "../feldspar" }
