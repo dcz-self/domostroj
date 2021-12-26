@@ -21,7 +21,7 @@ use bevy::transform::components::Transform;
 use feldspar::{
     bb::core::prelude::*,
 };
-
+use feldspar::prelude::MeshCutoff;
 
 /// How far the hint box should extend towards the bottom.
 const HINT_ANCHOR: f32 = -256.0;
@@ -39,6 +39,18 @@ pub struct SlicingHint;
 /// which should be replaced,
 /// and above which voxels should be made invisible.
 pub struct SliceHeight(pub i32);
+
+pub fn set_render_slice(
+    slice_height: Res<SliceHeight>,
+    current_tool: Res<CurrentTool>,
+    mut render_cutoff: ResMut<MeshCutoff>,
+) {
+    *render_cutoff = if let CurrentTool::Slice = *current_tool {
+        MeshCutoff(slice_height.0)
+    } else {
+        MeshCutoff::nothing()
+    }
+}
 
 /* from Cobble */
 /// The SliceHeight specifies the bottom of the voxel layer.
