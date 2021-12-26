@@ -24,7 +24,8 @@ use feldspar::bb::mesh::{OrientedCubeFace, PosNormMesh, UnorientedQuad};
 
 pub struct SelectionTag;
 
-pub fn initialize_pick_view(
+// TODO: those will never be larger than 1px, so merge into pick_hint
+fn initialize_pick_view(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
@@ -34,7 +35,7 @@ pub fn initialize_pick_view(
     commands.insert_resource(material);
 }
 
-pub fn pick_view_system(
+fn pick_view_system(
     selection_state: Res<SelectionState>,
     cursor_voxel: Res<VoxelCursorRayImpact>,
     material: Res<SelectionCursorMaterial>,
@@ -102,8 +103,6 @@ fn create_single_quad_mesh_bundle(
         ..Default::default()
     }
 }
-
-
 
 /* from Cobble */
 pub fn update_pick_hint(
