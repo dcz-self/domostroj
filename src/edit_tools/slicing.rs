@@ -157,3 +157,16 @@ pub fn setup_slicing_hint(
         })
         .insert(SlicingHint);
 }
+
+
+use bevy::{ecs::prelude::*, input::prelude::*};
+use feldspar::prelude::ChunkMesh;
+
+pub fn show_mesh_count(
+    keyboard: Res<Input<KeyCode>>,
+    meshes: Query<&ChunkMesh>,
+) {
+    if keyboard.just_pressed(KeyCode::P) {
+        println!("Meshes: {}", meshes.iter().len());
+    }
+}

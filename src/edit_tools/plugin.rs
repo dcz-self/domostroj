@@ -6,7 +6,7 @@ use super::{
     },
     edit_timeline::EditTimeline,
     selection::{SelectionEvents, SelectionPlugin},
-    slicing::{ SliceHeight, setup_slicing_hint, update_slicing_hint, set_render_slice },
+    slicing::{ SliceHeight, setup_slicing_hint, update_slicing_hint, set_render_slice, show_mesh_count },
     slicing::user::{ switch_to_slicer, slicer_change_level },
     terraformer::{
         terraformer_default_input_map, terraformer_system, Terraformer, TerraformerEvents,
@@ -57,6 +57,7 @@ impl Plugin for EditToolsPlugin {
                     .with_system(switch_to_slicer.system())
                     .with_system(update_slicing_hint.system())
                     .with_system(set_render_slice.system())
+                    .with_system(show_mesh_count.system())
             );
     }
 }
