@@ -1,6 +1,7 @@
 /*! Slicing mode: insert voxels on the specified plane only, hide anything that's above. */
 
 pub mod user;
+pub mod edit;
 
 use crate::{geometry::offset_transform, CursorRay};
 use crate::edit_tools::{VOXEL_WIDTH, CurrentTool};
@@ -21,7 +22,7 @@ use bevy::transform::components::Transform;
 use feldspar::{
     bb::core::prelude::*,
 };
-use feldspar::prelude::MeshCutoff;
+use feldspar::prelude::{ MeshCutoff, VoxelType };
 
 /// How far the hint box should extend towards the bottom.
 const HINT_ANCHOR: f32 = -256.0;
@@ -35,19 +36,34 @@ const HINT_ANCHOR: f32 = -256.0;
 /// Scale it using Transform, vertically.
 pub struct SlicingHint;
 
+/// Sate of the plugin
+pub struct State {
+    slice_height: SliceHeight,
+    voxel_type: VoxelType,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        State {
+            slice_height: SliceHeight(5),
+            voxel_type: VoxelType(1),
+        }
+    }
+}
+
 /// The vertical index of the voxel,
 /// which should be replaced,
 /// and above which voxels should be made invisible.
 pub struct SliceHeight(pub i32);
 
 pub fn set_render_slice(
-    slice_height: Res<SliceHeight>,
+    state: Res<State>,
     current_tool: Res<CurrentTool>,
     mut render_cutoff: ResMut<MeshCutoff>,
 ) {
     *render_cutoff = if let CurrentTool::Slice = *current_tool {
         // Cut off *above the top* of the current layer
-        MeshCutoff(slice_height.0.saturating_add(1))
+        MeshCutoff(state.slice_height.0.saturating_add(1))
     } else {
         MeshCutoff::nothing()
     }
@@ -91,7 +107,7 @@ fn find_cursor_voxel(
 pub fn update_slicing_hint(
     cursor_ray: Res<CursorRay>,
     current_tool: Res<CurrentTool>,
-    slice_height: Res<SliceHeight>,
+    state: Res<State>,
     mut hint: Query<
         (&mut Visible, &mut Transform),
         With<SlicingHint>,
@@ -104,8 +120,8 @@ pub fn update_slicing_hint(
             return;
         }
 
-        if let Some(voxel) = find_cursor_voxel(&*cursor_ray, &*slice_height) {
-            let selection_layer_top = (slice_height.0 + 1) as f32 * VOXEL_WIDTH;
+        if let Some(voxel) = find_cursor_voxel(&*cursor_ray, &state.slice_height) {
+            let selection_layer_top = (state.slice_height.0 + 1) as f32 * VOXEL_WIDTH;
             let hint_height = selection_layer_top - HINT_ANCHOR;
             let voxel_position = VOXEL_WIDTH * Point3f::from(voxel);
             let hint_offset = PointN([voxel_position.x(), HINT_ANCHOR, voxel_position.z()]);

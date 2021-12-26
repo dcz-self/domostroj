@@ -6,6 +6,7 @@ use super::{
     },
     edit_timeline::EditTimeline,
     selection::{SelectionEvents, SelectionPlugin},
+    slicing,
     slicing::{ SliceHeight, setup_slicing_hint, update_slicing_hint, set_render_slice, show_mesh_count },
     slicing::user::{ switch_to_slicer, slicer_change_level },
     terraformer::{
@@ -37,8 +38,9 @@ impl Plugin for EditToolsPlugin {
             .insert_resource(EditTimeline::new(self.chunk_shape))
             .insert_resource(Terraformer::default())
             .insert_resource(CurrentTool::Slice)
-            .insert_resource(SliceHeight(5))
+            .insert_resource(slicing::State::default())
             .add_event::<TerraformerEvents>()
+            .add_event::<slicing::edit::Events>()
             .add_event::<DragFaceEvents>()
             .add_event::<SelectionEvents>()
             .add_system_set(
@@ -57,6 +59,8 @@ impl Plugin for EditToolsPlugin {
                     .with_system(switch_to_slicer.system())
                     .with_system(update_slicing_hint.system())
                     .with_system(set_render_slice.system())
+                    .with_system(slicing::edit::update_state.system())
+                    .with_system(slicing::edit::input_map.system())
                     .with_system(show_mesh_count.system())
             );
     }
