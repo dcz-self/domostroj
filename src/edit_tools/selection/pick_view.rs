@@ -2,6 +2,7 @@ use super::SelectionState;
 
 use crate::{geometry::offset_transform, ImmediateModeTag, VoxelCursorRayImpact};
 use crate::edit_tools::VOXEL_WIDTH;
+use crate::edit_tools::CurrentTool;
 
 use bevy::{
     asset::prelude::*,
@@ -107,13 +108,15 @@ fn create_single_quad_mesh_bundle(
 /* from Cobble */
 pub fn update_pick_hint(
     cursor_voxel: Res<VoxelCursorRayImpact>,
+    current_tool: Res<CurrentTool>,
     mut query_selection: Query<
         (&mut Visible, &mut Transform),
         With<SelectionTag>,
     >,
 ) {
     if let Ok((mut draw, mut transform)) = query_selection.single_mut() {
-        if let Some(voxel) = cursor_voxel.get_neighoring_voxel() {
+        let cond = (cursor_voxel.get_neighoring_voxel(), &*current_tool);
+        if let (Some(voxel), &CurrentTool::Terraform) = cond {
             *transform = offset_transform(VOXEL_WIDTH * Point3f::from(voxel));
             draw.is_visible = true;
         } else {
