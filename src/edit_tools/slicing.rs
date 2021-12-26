@@ -46,9 +46,33 @@ pub fn set_render_slice(
     mut render_cutoff: ResMut<MeshCutoff>,
 ) {
     *render_cutoff = if let CurrentTool::Slice = *current_tool {
-        MeshCutoff(slice_height.0)
+        // Cut off *above the top* of the current layer
+        MeshCutoff(slice_height.0.saturating_add(1))
     } else {
         MeshCutoff::nothing()
+    }
+}
+
+
+fn find_cursor_voxel(
+    cursor_ray: &CursorRay,
+    slice_height: &SliceHeight,
+) -> Option<Point3i> {
+    if let CursorRay(Some(ray)) = *cursor_ray {
+        // Everything past this point happens in the voxel coord system.
+        let plane = Plane {
+            origin: Vec3::new(0.0, 1.0 * slice_height.0 as f32, 0.0),
+            normal: Vec3::new(0.0, 1.0, 0.0)
+        };
+
+        let intersection = ray_plane_intersection(&ray, &plane);
+        if let RayPlaneIntersection::SinglePoint(point) = intersection {
+            Some(PointN([point.x as i32, point.y as i32, point.z as i32]))
+        } else {
+            None
+        }
+    } else {
+        None
     }
 }
 
@@ -79,32 +103,19 @@ pub fn update_slicing_hint(
             draw.is_visible = false;
             return;
         }
-        
-        draw.is_visible = if let CursorRay(Some(ray)) = *cursor_ray {
-            // Everything past this point happens in the voxel coord system.
-            let plane = Plane {
-                origin: Vec3::new(0.0, 1.0 * slice_height.0 as f32, 0.0),
-                normal: Vec3::new(0.0, 1.0, 0.0)
+
+        if let Some(voxel) = find_cursor_voxel(&*cursor_ray, &*slice_height) {
+            let selection_layer_top = (slice_height.0 + 1) as f32 * VOXEL_WIDTH;
+            let hint_height = selection_layer_top - HINT_ANCHOR;
+            let voxel_position = VOXEL_WIDTH * Point3f::from(voxel);
+            let hint_offset = PointN([voxel_position.x(), HINT_ANCHOR, voxel_position.z()]);
+            *transform = Transform {
+                scale: Vec3::new(1.0, hint_height, 1.0),
+                ..offset_transform(hint_offset)
             };
-
-            let intersection = ray_plane_intersection(&ray, &plane);
-            if let RayPlaneIntersection::SinglePoint(point) = intersection {
-                let voxel = PointN([point.x as i32, point.y as i32, point.z as i32]);
-
-                let selection_layer_top = (slice_height.0 + 1) as f32 * VOXEL_WIDTH;
-                let hint_height = selection_layer_top - HINT_ANCHOR;
-                let voxel_position = VOXEL_WIDTH * Point3f::from(voxel);
-                let hint_offset = PointN([voxel_position.x(), HINT_ANCHOR, voxel_position.z()]);
-                *transform = Transform {
-                    scale: Vec3::new(1.0, hint_height, 1.0),
-                    ..offset_transform(hint_offset)
-                };
-                true
-            } else {
-                false
-            }
+            draw.is_visible = true;
         } else {
-            false
+            draw.is_visible = false;
         }
     }
 }
