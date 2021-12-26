@@ -1,4 +1,5 @@
 use super::SelectionState;
+use crate::edit_tools::{ CurrentTool, DragFaceState };
 
 use crate::{geometry::offset_transform, ImmediateModeTag, VoxelCursorRayImpact};
 
@@ -25,14 +26,19 @@ pub fn initialize_selection_view(
 }
 
 pub fn selection_view_system(
-    selection_state: Res<SelectionState>,
+    current_tool: Res<CurrentTool>,
     cursor_voxel: Res<VoxelCursorRayImpact>,
     material: Res<SelectionCursorMaterial>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     let mut quad_face = None;
-    match *selection_state {
+    let state = match *current_tool {
+        CurrentTool::DragFace(DragFaceState::Selecting(state)) => state,
+        _ => { return; },
+    };
+
+    match state {
         SelectionState::SelectingFirstCorner => {
             if let Some(voxel_face) = cursor_voxel.get_voxel_face() {
                 let quad = UnorientedQuad::from_voxel(voxel_face.point);
@@ -62,7 +68,7 @@ pub fn selection_view_system(
             let quad = face.quad_from_extent(&quad_extent);
             quad_face = Some((quad, face));
         }
-        SelectionState::Invisible => (),
+        SelectionState::Invisible => {println!("Invis");},
     }
 
     if let Some((quad, face)) = quad_face {

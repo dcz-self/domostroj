@@ -25,12 +25,19 @@ use smooth_bevy_cameras::controllers::unreal::UnrealCameraController;
 
 #[derive(Clone, Copy)]
 pub enum DragFaceState {
-    SelectionReady,
+    /// Includes after selection is ready
+    Selecting(SelectionState),
     DraggingFace {
         quad_extent: Extent3i,
         normal: SignedAxis3,
         previous_drag_point: Point3i,
     },
+}
+
+impl Default for DragFaceState {
+    fn default() -> Self {
+        Self::Selecting(SelectionState::SelectingFirstCorner)
+    }
 }
 
 pub enum DragFaceEvents {
@@ -43,7 +50,6 @@ pub fn drag_face_default_input_map(
     voxel_cursor: VoxelCursor,
     mut events: EventWriter<DragFaceEvents>,
     current_tool: Res<CurrentTool>,
-    selection_state: Res<SelectionState>,
     cursor_ray: Res<CursorRay>,
 ) {
     let state = if let CurrentTool::DragFace(state) = *current_tool {
@@ -52,12 +58,13 @@ pub fn drag_face_default_input_map(
         return;
     };
     match state {
-        DragFaceState::SelectionReady => {
-            if let SelectionState::SelectionReady { quad_extent, .. } = *selection_state {
-                if let Some(voxel_face) = voxel_cursor.voxel_just_pressed(MouseButton::Left) {
-                    if quad_extent.contains(voxel_face.point) {
-                        events.send(DragFaceEvents::StartDragFace(voxel_face))
-                    }
+        DragFaceState::Selecting(SelectionState::SelectionReady {
+            quad_extent,
+            ..
+        }) => {
+            if let Some(voxel_face) = voxel_cursor.voxel_just_pressed(MouseButton::Left) {
+                if quad_extent.contains(voxel_face.point) {
+                    events.send(DragFaceEvents::StartDragFace(voxel_face))
                 }
             }
         }
@@ -88,14 +95,16 @@ pub fn drag_face_default_input_map(
             if voxel_cursor.mouse_input.just_released(MouseButton::Left) {
                 events.send(DragFaceEvents::FinishDragFace)
             }
-        }
+        },
+        DragFaceState::Selecting(SelectionState::SelectingFirstCorner) => {},
+        DragFaceState::Selecting(SelectionState::SelectingSecondCorner {..}) => {},
+        DragFaceState::Selecting(SelectionState::Invisible) => {},
     }
 }
 
 pub fn drag_face_tool_system(
     mut current_tool: ResMut<CurrentTool>,
     mut voxel_editor: SnapshottingVoxelEditor,
-    mut selection_state: ResMut<SelectionState>,
     mut mouse_camera_controllers: Query<&mut UnrealCameraController>,
     mut events: EventReader<DragFaceEvents>,
 ) {
@@ -108,20 +117,19 @@ pub fn drag_face_tool_system(
     for event in events.iter() {
         match event {
             DragFaceEvents::StartDragFace(voxel_face) => {
-                if let SelectionState::SelectionReady {
+                if let DragFaceState::Selecting(SelectionState::SelectionReady {
                     quad_extent,
                     normal,
-                } = *selection_state
+                }) = state
                 {
                     if let Some(mut controller) = mouse_camera_controllers.iter_mut().next() {
                         controller.enabled = false;
                     }
                     *state = DragFaceState::DraggingFace {
-                        quad_extent,
-                        normal,
+                        quad_extent: *quad_extent,
+                        normal: *normal,
                         previous_drag_point: voxel_face.point,
                     };
-                    *selection_state = SelectionState::Invisible;
                 }
             }
             DragFaceEvents::UpdateDragFace(new_drag_point) => {
@@ -171,8 +179,7 @@ pub fn drag_face_tool_system(
                     controller.enabled = true;
                 }
                 voxel_editor.finish_edit();
-                *state = DragFaceState::SelectionReady;
-                *selection_state = SelectionState::SelectingFirstCorner;
+                *state = DragFaceState::Selecting(SelectionState::SelectingFirstCorner);
             }
         }
     }

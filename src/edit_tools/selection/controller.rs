@@ -1,3 +1,4 @@
+use crate::edit_tools::{ CurrentTool, DragFaceState };
 use crate::picking::{VoxelCursor, VoxelFace};
 
 use bevy::{
@@ -7,7 +8,7 @@ use bevy::{
 };
 use feldspar::bb::core::{prelude::*, SignedAxis3};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum SelectionState {
     SelectingFirstCorner,
     SelectingSecondCorner {
@@ -31,22 +32,20 @@ pub enum SelectionEvents {
     SelectSecondCorner(VoxelFace),
 }
 
-pub fn initialize_selection_controller(mut commands: Commands) {
-    commands.insert_resource(SelectionState::SelectingFirstCorner);
-}
-
 pub fn selection_default_input_map(
     mut events: EventWriter<SelectionEvents>,
-    mut selection_state: ResMut<SelectionState>,
+    mut current_tool: ResMut<CurrentTool>,
     voxel_cursor: VoxelCursor,
 ) {
-    match &mut *selection_state {
-        SelectionState::SelectingFirstCorner => {
+
+    
+    match &mut *current_tool {
+        CurrentTool::DragFace(DragFaceState::Selecting(SelectionState::SelectingFirstCorner)) => {
             if let Some(first_corner) = voxel_cursor.voxel_just_clicked(MouseButton::Left) {
                 events.send(SelectionEvents::SelectFirstCorner(first_corner));
             }
         }
-        SelectionState::SelectingSecondCorner { valid_hover, .. } => {
+        CurrentTool::DragFace(DragFaceState::Selecting(SelectionState::SelectingSecondCorner { valid_hover, .. })) => {
             if let Some(hover_face) = voxel_cursor.impact.get_voxel_face() {
                 if let Some(previous_hover) = valid_hover {
                     if hover_face != *previous_hover {
@@ -63,42 +62,51 @@ pub fn selection_default_input_map(
 }
 
 pub fn selection_control_system(
-    mut selection_state: ResMut<SelectionState>,
+    mut current_tool: ResMut<CurrentTool>,
     mut events: EventReader<SelectionEvents>,
 ) {
     for event in events.iter() {
         match event {
             SelectionEvents::SelectFirstCorner(first_corner) => {
-                *selection_state = SelectionState::SelectingSecondCorner {
+                *current_tool = CurrentTool::DragFace(DragFaceState::Selecting(SelectionState::SelectingSecondCorner {
                     first_corner: *first_corner,
                     valid_hover: Some(*first_corner),
-                };
+                }));
             }
             SelectionEvents::HoverMove(hover_face) => {
-                if let SelectionState::SelectingSecondCorner { first_corner, .. } = *selection_state
+                if let CurrentTool::DragFace(DragFaceState::Selecting(
+                    SelectionState::SelectingSecondCorner { first_corner, .. }
+                )) = *current_tool
                 {
                     if selection_corners_are_compatible(&first_corner, &hover_face) {
-                        *selection_state = SelectionState::SelectingSecondCorner {
-                            first_corner,
-                            valid_hover: Some(*hover_face),
-                        };
+                        *current_tool = CurrentTool::DragFace(DragFaceState::Selecting(
+                            SelectionState::SelectingSecondCorner {
+                                first_corner,
+                                valid_hover: Some(*hover_face),
+                            }
+                        ));
                     }
                 }
             }
             SelectionEvents::SelectSecondCorner(hover_face) => {
-                if let SelectionState::SelectingSecondCorner { first_corner, .. } =
-                    &mut *selection_state
+                if let CurrentTool::DragFace(DragFaceState::Selecting(
+                    SelectionState::SelectingSecondCorner { first_corner, .. }
+                )) = *current_tool
                 {
-                    if selection_corners_are_compatible(first_corner, &hover_face) {
-                        *selection_state = SelectionState::SelectionReady {
-                            quad_extent: Extent3i::from_corners(
-                                first_corner.point,
-                                hover_face.point,
-                            ),
-                            normal: first_corner.normal,
-                        };
+                    if selection_corners_are_compatible(&first_corner, &hover_face) {
+                        *current_tool = CurrentTool::DragFace(DragFaceState::Selecting(
+                            SelectionState::SelectionReady {
+                                quad_extent: Extent3i::from_corners(
+                                    first_corner.point,
+                                    hover_face.point,
+                                ),
+                                normal: first_corner.normal,
+                            }
+                        ));
                     } else {
-                        *selection_state = SelectionState::SelectingFirstCorner;
+                        *current_tool = CurrentTool::DragFace(DragFaceState::Selecting(
+                            SelectionState::SelectingFirstCorner
+                        ));
                     }
                 }
             }
