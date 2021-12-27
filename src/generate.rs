@@ -4,7 +4,7 @@
 use bevy::{
     prelude::*,
     render::{
-        camera::{ActiveCameras, Camera},
+        camera::{ActiveCameras, Camera, RenderLayers},
         pass::*,
         render_graph::{
             base::MainPass, CameraNode, PassNode, RenderGraph, WindowSwapChainNode,
@@ -189,23 +189,21 @@ fn setup_pipeline(
     // SETUP SCENE
 
     // add entities to the world
-    // light
-    commands.spawn_bundle(LightBundle {
-        transform: Transform::from_xyz(4.0, 5.0, 4.0),
-        ..Default::default()
-    });
+    // light is shared between layers, sadly
     // generator window camera
     let eye = Vec3::new(40.0, 20.0, 40.0);
     let target = Vec3::new(20.0, 0.0, 20.0);
-    commands.spawn_bundle(PerspectiveCameraBundle {
-        camera: Camera {
-            name: Some("Generator".to_string()),
-            window: window_id,
+    commands
+        .spawn_bundle(PerspectiveCameraBundle {
+            camera: Camera {
+                name: Some("Generator".to_string()),
+                window: window_id,
+                ..Default::default()
+            },
+            transform: eye_look_at_target_transform(eye, target),
             ..Default::default()
-        },
-        transform: eye_look_at_target_transform(eye, target),
-        ..Default::default()
-    });
+        })
+        .insert(RenderLayers::layer(1));
 
     app_state.set(AppState::Done).unwrap();
 }
