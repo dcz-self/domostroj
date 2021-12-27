@@ -3,6 +3,7 @@ mod config;
 mod cursor_tracker;
 mod database;
 mod edit_tools;
+pub mod generate;
 mod geometry;
 mod immediate_mode;
 mod picking;

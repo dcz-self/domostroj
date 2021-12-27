@@ -69,7 +69,7 @@ impl Plugin for EditorPlugin {
         app
             // Bevy stuff.
             .insert_resource(WindowDescriptor {
-                width: 1600.0,
+                width: 800.0,
                 height: 900.0,
                 title: "Feldspar Editor".to_string(),
                 ..Default::default()
