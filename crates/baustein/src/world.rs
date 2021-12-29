@@ -4,9 +4,9 @@ use feldspar_core::glam::IVec3;
 use feldspar_map::{palette::PaletteId8, sdf::Sd8};
 use feldspar_map::chunk::{ Chunk, ChunkShape, SdfChunk, PaletteIdChunk };
 use feldspar_map::units::{ ChunkUnits, VoxelUnits };
-use ndshape::{ConstPow2Shape3i32, ConstShape};
+use ndshape::ConstShape;
 use std::collections::HashMap;
-use crate::traits::{Map, Index, ChunkIndex};
+use crate::traits::{Index, ChunkIndex};
 
 use crate::traits::Extent;
 
@@ -93,14 +93,14 @@ impl World {
 }
 
 struct Cow<'a> {
-    chunks: &'a World,
+    base: &'a World,
     overlaid: HashMap<ChunkIndex, PaletteIdChunk>,
 }
 
 impl<'a> Cow<'a> {
-    fn new(chunks: &'a World) -> Self {
+    fn new(base: &'a World) -> Self {
         Cow {
-            chunks,
+            base,
             overlaid: Default::default(),
         }
     }
@@ -113,11 +113,23 @@ impl<'a> Cow<'a> {
     fn get_chunk(&self, offset: ChunkIndex) -> PaletteIdChunk {
         let ci = World::truncate_chunk_index(offset);
         *self.overlaid.get(&ci)
-            .unwrap_or(&self.chunks.get_chunk(ci))
+            .unwrap_or(&self.base.get_chunk(ci))
     }
 
     fn set_chunk(&mut self, offset: ChunkIndex, chunk: PaletteIdChunk) {
         let ci = World::truncate_chunk_index(offset);
         self.overlaid.insert(ci, chunk);
+    }
+
+    /* Nice idea, but we need to implement a struct that will hold the overlaid while it's being drained.
+    fn iter_overlay(self) -> impl Iterator<Item=(ChunkIndex, PaletteIdChunk)> {
+        self.overlaid.drain()
+    }*/
+
+    /// Applies changes to world. Caution: does not care if it applies to the correct world.
+    fn apply(mut self, output: &mut World) {
+        for (offset, chunk) in self.overlaid.drain() {
+            output.chunks.insert(offset, chunk);
+        }
     }
 }
