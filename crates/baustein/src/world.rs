@@ -6,9 +6,8 @@ use feldspar_map::chunk::{ Chunk, ChunkShape, SdfChunk, PaletteIdChunk };
 use feldspar_map::units::{ ChunkUnits, VoxelUnits };
 use ndshape::ConstShape;
 use std::collections::HashMap;
-use crate::traits::{Index, ChunkIndex};
+use crate::traits::{Extent, MutChunk, Index, ChunkIndex};
 
-use crate::traits::Extent;
 
 type Voxel = (Sd8, PaletteId8);
 
@@ -23,11 +22,28 @@ impl Extent for Chunk {
     }
 }
 
+impl MutChunk for Chunk {
+    type Voxel = Voxel;
+    
+    fn set(&mut self, offset: Index, value: Self::Voxel) {
+        self.sdf.set(offset, value.0);
+        self.palette_ids.set(offset, value.1);
+    }
+}
+
 impl Extent for SdfChunk {
     type Voxel = Sd8;
 
     fn get(&self, offset: Index) -> Self::Voxel {
         self[ChunkShape::linearize(offset.0.to_array()) as usize]
+    }
+}
+
+impl MutChunk for SdfChunk {
+    type Voxel = Sd8;
+    
+    fn set(&mut self, offset: Index, value: Self::Voxel) {
+        self[ChunkShape::linearize(offset.0.to_array()) as usize] = value;
     }
 }
 
@@ -40,8 +56,17 @@ impl Extent for PaletteIdChunk {
 }
 
 
+impl MutChunk for PaletteIdChunk {
+    type Voxel = PaletteId8;
+    
+    fn set(&mut self, offset: Index, value: Self::Voxel) {
+        self[ChunkShape::linearize(offset.0.to_array()) as usize] = value;
+    }
+}
+
 /// A really terrible, simple world type
 /// What do I want from the world?
+/// Definitely not direct mutability. Use the Cow.
 #[derive(Default)]
 struct World {
     chunks: HashMap<ChunkIndex, PaletteIdChunk>,
@@ -110,10 +135,23 @@ impl<'a> Cow<'a> {
         self.get_chunk(ci).get(VoxelUnits(offset.0 - ci.0))
     }
 
+    // Not sure if this is the right place to do this, but let's try.
+    fn set(&mut self, offset: Index, value: PaletteId8) {
+        let ci = World::to_chunk_index(offset);
+        let i = VoxelUnits(offset.0 - ci.0);
+        let mut chunk = self.get_chunk_mut(ci);
+        chunk.set(i, value);
+    }
+
     fn get_chunk(&self, offset: ChunkIndex) -> PaletteIdChunk {
         let ci = World::truncate_chunk_index(offset);
         *self.overlaid.get(&ci)
             .unwrap_or(&self.base.get_chunk(ci))
+    }
+
+    fn get_chunk_mut(&mut self, offset: ChunkIndex) -> &mut PaletteIdChunk {
+        let ci = World::truncate_chunk_index(offset);
+        self.overlaid.entry(ci).or_insert_with(|| self.base.get_chunk(ci))
     }
 
     fn set_chunk(&mut self, offset: ChunkIndex, chunk: PaletteIdChunk) {

@@ -65,6 +65,12 @@ impl<T: Copy, E: Extent, F> Extent for MapIndex<E, F>
     }
 }
 
+
+pub trait MutChunk {
+    type Voxel: Copy;
+    fn set(&mut self, offset: Index, value: Self::Voxel);
+}
+
 /*
 /// Iterate over chunks.
 trait World<C: Extent> {
