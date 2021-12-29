@@ -1,8 +1,11 @@
 [package]
-name = "feldspar-editor"
+name = "domostroj"
 version = "0.1.0"
-authors = ["Duncan <bonsairobo@gmail.com>"]
+authors = ["dcz <gilaac.dcz@porcupinefactory.org>"]
 edition = "2018"
+
+[workspace]
+members = ["crates/*"]
 
 [profile]
 dev = { opt-level = 2 }

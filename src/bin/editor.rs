@@ -1,4 +1,4 @@
-use feldspar_editor::{generate, Config, EditorPlugin};
+use domostroj::{generate, Config, EditorPlugin};
 
 use bevy::app::prelude::*;
 
