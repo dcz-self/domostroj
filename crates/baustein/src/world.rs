@@ -107,11 +107,20 @@ impl World {
         let ci = Self::truncate_chunk_index(offset);
         *self.chunks.get(&ci).clone().unwrap_or(&[0; 4096])
     }
-/*
-    fn iter_chunks(&self) -> impl Iterator<Item=(ChunkIndex, PaletteIdChunk)> {
-        chunks.
+    
+    fn get_chunk_ref(&self, offset: ChunkIndex) -> &PaletteIdChunk {
+        let ci = Self::truncate_chunk_index(offset);
+        self.chunks.get(&ci).clone().unwrap_or(&[0; 4096])
     }
-*/
+
+    fn iter_chunks(&self) -> impl Iterator<Item=(ChunkIndex, &PaletteIdChunk)> {
+        self.chunks.iter().map(|(offset, chunk)| (offset.clone(), chunk))
+    }
+
+    fn iter_chunk_indices<'a>(&'a self) -> impl Iterator<Item=ChunkIndex> + 'a {
+        self.chunks.keys().cloned()
+    }
+
     fn cow<'a>(&'a self) -> Cow<'a> {
         Cow::new(&self)
     }
@@ -149,6 +158,12 @@ impl<'a> Cow<'a> {
             .unwrap_or(&self.base.get_chunk(ci))
     }
 
+    fn get_chunk_ref(&self, offset: ChunkIndex) -> &PaletteIdChunk {
+        let ci = World::truncate_chunk_index(offset);
+        self.overlaid.get(&ci)
+            .unwrap_or(self.base.get_chunk_ref(ci))
+    }
+
     fn get_chunk_mut(&mut self, offset: ChunkIndex) -> &mut PaletteIdChunk {
         let ci = World::truncate_chunk_index(offset);
         self.overlaid.entry(ci).or_insert_with(|| self.base.get_chunk(ci))
@@ -157,6 +172,18 @@ impl<'a> Cow<'a> {
     fn set_chunk(&mut self, offset: ChunkIndex, chunk: PaletteIdChunk) {
         let ci = World::truncate_chunk_index(offset);
         self.overlaid.insert(ci, chunk);
+    }
+
+    fn iter_chunks(&self) -> impl Iterator<Item=(ChunkIndex, &PaletteIdChunk)> {
+        self.iter_chunk_indices()
+            .map(|offset| (offset, self.get_chunk_ref(offset)))
+    }
+
+    fn iter_chunk_indices<'b>(&'b self) -> impl Iterator<Item=ChunkIndex> + 'b {
+        self.base.chunks.keys()
+            .filter(|offset| !self.overlaid.contains_key(offset))
+            .chain(self.overlaid.keys())
+            .cloned()
     }
 
     /* Nice idea, but we need to implement a struct that will hold the overlaid while it's being drained.
