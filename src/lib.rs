@@ -16,7 +16,6 @@ use edit_tools::EditToolsPlugin;
 use immediate_mode::{ImmediateModePlugin, ImmediateModeTag};
 use picking::{VoxelCursor, VoxelCursorRayImpact, VoxelPickingPlugin};
 use plugin::EditorState;
-use baustein;
 
 pub use config::*;
 pub use plugin::EditorPlugin;
