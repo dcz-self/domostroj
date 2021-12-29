@@ -1,12 +1,14 @@
 /*! Traits for easy access to voxels */
-
-use feldspar_map::chunk::CHUNK_SIZE;
-use feldspar_map::units::VoxelUnits;
-
 use feldspar_core::glam::IVec3;
 
-pub type Index = VoxelUnits<IVec3>;
+use feldspar_map::chunk::CHUNK_SIZE;
+use feldspar_map::units::{ ChunkUnits, VoxelUnits };
 
+pub type Index = VoxelUnits<IVec3>;
+pub type ChunkIndex = ChunkUnits<IVec3>;
+
+/// Actually just a chunk.
+/// TODO:
 /// Access to elements of a 3d dense cuboid region of voxels.
 /// Should be used for chunks, may be used for the world.
 /// It cannot be modified in place, instead replace the entire chunk.
@@ -65,7 +67,7 @@ impl<T: Copy, E: Extent, F> Extent for MapIndex<E, F>
 
 /*
 /// Iterate over chunks.
-trait World<C> {
+trait World<C: Extent> {
     fn get(&self, offset: VoxelUnits) -> &C;
     fn set(&mut self, offset: VoxelUnits, C);
     fn chunks(&self) -> ChunkIter<C>;
