@@ -21,7 +21,15 @@ pub trait Extent {
             f,
         }
     }
-    //fn map_index<'a, U: Copy>(&'a self, f: impl F(VoxelUnits, Self::Voxel) -> U) -> MappedIndexedExtent<'a, U>;
+
+    fn map_index<'a, U: Copy, F>(&'a self, f: F) -> MapIndex<&'a Self, F>
+        where F: Fn(Index, Self::Voxel) -> U,
+    {
+        MapIndex {
+            extent: self,
+            f,
+        }
+    }
 }
 
 pub struct Map<E, F> {
@@ -37,11 +45,22 @@ impl<T: Copy, E: Extent, F> Extent for Map<E, F>
     fn get(&self, offset: Index) -> Self::Voxel {
         (self.f)(self.extent.get(offset))
     }
+}
 
-    /*
-    fn map_index<'a, U: Copy>(&'a self, f: impl F(VoxelUnits, Self::Voxel) -> U) -> MappedIndexedExtent<'a, U> {
-        panic!();
-    }*/
+
+pub struct MapIndex<E, F> {
+    extent: E,
+    f: F,
+}
+
+impl<T: Copy, E: Extent, F> Extent for MapIndex<E, F>
+    where F: Fn(Index, E::Voxel) -> T,
+{
+    type Voxel = T;
+
+    fn get(&self, offset: Index) -> Self::Voxel {
+        (self.f)(offset, self.extent.get(offset))
+    }
 }
 
 /*
