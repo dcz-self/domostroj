@@ -1,4 +1,4 @@
 mod indices;
-//mod render;
+mod render;
 mod traits;
 mod world;
