@@ -174,9 +174,18 @@ impl<'a> Cow<'a> {
         self.overlaid.drain()
     }*/
 
+    /// Extracts changes ready for application on a mutable world
+    fn changes(self) -> Overlay {
+        Overlay(self.overlaid)
+    }
+}
+
+struct Overlay(HashMap<ChunkIndex, PaletteIdChunk>);
+
+impl Overlay {
     /// Applies changes to world. Caution: does not care if it applies to the correct world.
     fn apply(mut self, output: &mut World) {
-        for (offset, chunk) in self.overlaid.drain() {
+        for (offset, chunk) in self.0.drain() {
             output.chunks.insert(offset, chunk);
         }
     }
