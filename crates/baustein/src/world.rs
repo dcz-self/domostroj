@@ -194,9 +194,9 @@ fn to_i32_arr(a: [u32; 3]) -> [i32; 3] {
     [a[0] as i32, a[1] as i32, a[2] as i32]
 }
 
-impl<'a, Shape, S> View<'a, S, Shape>
+impl<'a, Shape, S, V> View<'a, S, Shape>
     where
-        S: Space<Voxel=PaletteId8>,
+        S: Space<Voxel=V>,
         Shape: ConstShape<3, Coord=u32> + ndshape::Shape<3, Coord=u32>,
 {
     pub fn new(space: &'a S, offset: Index) -> Self {
@@ -206,7 +206,7 @@ impl<'a, Shape, S> View<'a, S, Shape>
             shape: Default::default(),
         }
     }
-    pub fn into_vec(self) -> Vec<PaletteId8> {
+    pub fn into_vec(self) -> Vec<V> {
         (0..Shape::SIZE)
             .map(|i| <Shape as ConstShape<3>>::delinearize(i))
             .map(|index| self.get(to_i32_arr(index).into()))
