@@ -120,8 +120,6 @@ fn generate_mesh_for_chunk(
         view_offset,
     );
 
-    let last = view.opposite_corner();
-
     let samples = view.clone().into_vec();
     let faces = RIGHT_HANDED_Y_UP_CONFIG.faces;
 
@@ -130,8 +128,8 @@ fn generate_mesh_for_chunk(
     greedy_quads(
         &samples,
         &ViewShape {},
-        to_u32_arr(view_offset.into()),
-        to_u32_arr(last.into()),
+        [0, 0, 0],
+        [17, 17, 17],
         &faces,
         &mut buffer,
     );
