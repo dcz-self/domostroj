@@ -181,8 +181,8 @@ impl<'a> Cow<'a> {
 use std::marker::PhantomData;
 
 #[derive(Clone, Copy)]
-pub struct View<'a, Shape> {
-    pub world: &'a World,
+pub struct View<'a, S, Shape> {
+    pub world: &'a S,
     pub offset: Index,
     pub shape: PhantomData<Shape>,
 }
@@ -191,30 +191,32 @@ fn to_i32_arr(a: [u32; 3]) -> [i32; 3] {
     [a[0] as i32, a[1] as i32, a[2] as i32]
 }
 
-impl<'a, S> View<'a, S>
-    where S: ConstShape<3, Coord=u32> + ndshape::Shape<3, Coord=u32>,
+impl<'a, Shape, S> View<'a, S, Shape>
+    where
+        S: Extent<Voxel=PaletteId8>,
+        Shape: ConstShape<3, Coord=u32> + ndshape::Shape<3, Coord=u32>,
 {
-    pub fn new(world: &'a World, offset: Index) -> Self {
+    pub fn new(space: &'a S, offset: Index) -> Self {
         Self {
-            world,
+            world: space,
             offset,
             shape: Default::default(),
         }
     }
     pub fn into_vec(self) -> Vec<PaletteId8> {
-        (0..S::SIZE)
-            .map(|i| <S as ConstShape<3>>::delinearize(i))
+        (0..Shape::SIZE)
+            .map(|i| <Shape as ConstShape<3>>::delinearize(i))
             .map(|index| self.get(to_i32_arr(index).into()))
             .collect()
     }
 
     pub fn opposite_corner(&self) -> Index {
-        self.offset + VoxelUnits(to_i32_arr(S::ARRAY).into())
+        self.offset + VoxelUnits(to_i32_arr(Shape::ARRAY).into())
     }
 }
 
-impl<'a, S> Extent for View<'a, S> {
-    type Voxel = PaletteId8;
+impl<'a, S: Extent, Space> Extent for View<'a, S, Space> {
+    type Voxel = S::Voxel;
     fn get(&self, offset: Index) -> Self::Voxel {
         self.world.get(offset - VoxelUnits(self.offset.into()))
     }
