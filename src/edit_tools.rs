@@ -17,9 +17,6 @@ pub enum CurrentTool {
     DragFace(DragFaceState),
     Terraform,
     Slice,
-    PaintMaterial, // TODO
-    Tile,          // TODO: tile the current buffer by dragging; replaces DragFace
-    Slope,         // TODO: select two edges to slope between
 }
 
 
