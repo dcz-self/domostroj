@@ -38,7 +38,7 @@ impl MergeVoxel for PaletteVoxel {
 type ViewShape = ConstShape3u32::<18, 18, 18>;
 
 
-struct Plugin;
+pub struct Plugin;
 
 impl app::Plugin for Plugin {
     fn build(&self, app: &mut AppBuilder) {
@@ -64,8 +64,7 @@ impl app::Plugin for Plugin {
                     is_empty: false,
                     material: VoxelMaterial(3),
                 },
-            ]))
-            .add_system(generate_meshes.system());
+            ]));
     }
 }
 
@@ -100,7 +99,9 @@ pub fn generate_meshes(
                         &mut meshes,
                     )
                 )
-                .insert(ChunkMesh);
+                .insert(ChunkMesh)
+                //FIXME: transform
+                ;
         }
     }
 }

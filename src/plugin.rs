@@ -122,6 +122,11 @@ impl Plugin for EditorPlugin {
             )
             // Generator
             .insert_resource(generate::test_world())
+            .add_plugin(baustein::render::Plugin)
+            .add_system_set(
+                SystemSet::on_update(EditorState::Editing)
+                    .with_system(baustein::render::generate_meshes.system())
+            )
             ;
     }
 }

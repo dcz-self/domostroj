@@ -67,7 +67,7 @@ impl ops::Add<VoxelUnits<IVec3>> for WorldIndex {
 
 pub type Index = WorldIndex;
 
-#[derive(Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq, Debug)]
 pub struct ChunkIndex(IVec3);
 
 pub type ChunkShape = ndshape::ConstShape3u32<16, 16, 16>;
