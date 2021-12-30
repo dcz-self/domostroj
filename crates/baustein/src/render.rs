@@ -1,10 +1,10 @@
 /*! Rendering.
  * Depends on parts of feldspar's rendering pipeline. */
-
-use building_blocks_mesh::PosNormMesh;
+use bevy::prelude::*;
 use block_mesh::ndshape::ConstShape3u32;
 use block_mesh::{greedy_quads, GreedyQuadsBuffer, MergeVoxel, Voxel, RIGHT_HANDED_Y_UP_CONFIG};
-use feldspar::prelude::{SdfVoxelPalette, VoxelType};
+use feldspar::bb::mesh::PosNormMesh;
+use feldspar::prelude::{ChunkMeshes, MeshMaterial, SdfVoxelPalette, VoxelType};
 use feldspar::renderer::create_voxel_mesh_bundle;
 use feldspar_core::glam::IVec3;
 use feldspar_map::palette::PaletteId8;
@@ -14,16 +14,6 @@ use crate::indices::{ to_i32_arr, to_u32_arr };
 use crate::traits::{ChunkIndex, Space};
 use crate::world::{World, View};
 
-
-/*
-fn generate_mesh_for_each_chunk(
-    voxel_map: &SdfVoxelMap,
-    dirty_chunks: &DirtyChunks,
-    cutoff_height: &MeshCutoff,
-    local_mesh_buffers: &ThreadLocalMeshBuffers,
-    pool: &ComputeTaskPool,
-) -> Vec<(ChunkKey3, Option<(PosNormMesh, Vec<[u8; 4]>)>)> {
-*/
 
 #[derive(Clone, Copy)]
 struct PaletteVoxel(PaletteId8);
@@ -46,6 +36,41 @@ impl MergeVoxel for PaletteVoxel {
 
 type ViewShape = ConstShape3u32::<18, 18, 18>;
 
+/// To track which parts should be despawned and when
+pub struct ChunkMesh;
+
+pub fn generate_meshes(
+    mut commands: Commands,
+    world: Res<World>,
+    palette: Res<SdfVoxelPalette>,
+    //cutoff_height: Res<MeshCutoff>,
+    mesh_material: Res<MeshMaterial>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut chunk_meshes: Query<Entity, With<ChunkMesh>>,
+) {
+    // Get rid of all meshes
+    for cm in chunk_meshes.iter() {
+        commands.entity(cm).despawn()
+    }
+    // And create the occupied ones again.
+    // Wasteful, I know. I'm testing!
+    for (index, chunk) in world.iter_chunks() {
+        let mesh = generate_mesh_for_chunk(&world, &palette, index);
+        if let Some((mesh, materials)) = mesh {
+            commands
+                .spawn_bundle(
+                    create_voxel_mesh_bundle(
+                        mesh,
+                        materials,
+                        mesh_material.0.clone(),
+                        &mut meshes,
+                    )
+                )
+                .insert(ChunkMesh);
+        }
+    }
+}
+
 
 fn generate_mesh_for_chunk(
     world: &World,
@@ -54,7 +79,7 @@ fn generate_mesh_for_chunk(
 ) -> Option<(PosNormMesh, Vec<[u8; 4]>)> {
     let wrapped = world.map(|v| PaletteVoxel(v));
     
-    let view_offset = index.get_world_offset() - VoxelUnits(IVec3::new(1, 1, 1));
+    let view_offset = index.get_world_offset();
     let view = View::<_, ndshape::ConstShape3u32<18, 18, 18>>::new(
         &wrapped,
         view_offset,

@@ -88,7 +88,7 @@ impl World {
         self.chunks.get(&offset).clone().unwrap_or(&[0; 4096])
     }
 
-    fn iter_chunks(&self) -> impl Iterator<Item=(ChunkIndex, &PaletteIdChunk)> {
+    pub fn iter_chunks(&self) -> impl Iterator<Item=(ChunkIndex, &PaletteIdChunk)> {
         self.chunks.iter().map(|(offset, chunk)| (offset.clone(), chunk))
     }
 
@@ -175,16 +175,16 @@ impl<'a> Cow<'a> {
     }*/
 
     /// Extracts changes ready for application on a mutable world
-    fn changes(self) -> Overlay {
+    pub fn changes(self) -> Overlay {
         Overlay(self.overlaid)
     }
 }
 
-struct Overlay(HashMap<ChunkIndex, PaletteIdChunk>);
+pub struct Overlay(HashMap<ChunkIndex, PaletteIdChunk>);
 
 impl Overlay {
     /// Applies changes to world. Caution: does not care if it applies to the correct world.
-    fn apply(mut self, output: &mut World) {
+    pub fn apply(mut self, output: &mut World) {
         for (offset, chunk) in self.0.drain() {
             output.chunks.insert(offset, chunk);
         }
