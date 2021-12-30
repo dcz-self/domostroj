@@ -116,7 +116,7 @@ pub trait Space {
     /// Mapping methods may skip some empty areas.
     fn map<'a, U: Copy, F: Fn(Self::Voxel) -> U>(&'a self, f: F) -> Map<&'a Self, F> {
         Map {
-            extent: self,
+            space: self,
             f,
         }
     }
@@ -130,6 +130,17 @@ pub trait Space {
         }
     }
 }
+
+impl<V, T> Space for &T
+    where
+    V: Copy,
+    T: Space<Voxel=V>,
+{
+    type Voxel = V;
+    fn get(&self, offset: Index) -> Self::Voxel {
+        self.get(offset)
+    }
+}
 /*
 impl<T, V, N> Into<[V; N]> for View
     where T: Space<Item=V>
@@ -140,17 +151,19 @@ impl<T, V, N> Into<[V; N]> for View
 }*/
 
 pub struct Map<E, F> {
-    extent: E,
+    space: E,
     f: F,
 }
 
-impl<T: Copy, E: Space, F> Space for Map<E, F>
-    where F: Fn(E::Voxel) -> T,
+impl<T: Copy, E, F> Space for Map<E, F>
+    where
+    E: Space,
+    F: Fn(E::Voxel) -> T,
 {
     type Voxel = T;
 
     fn get(&self, offset: Index) -> Self::Voxel {
-        (self.f)(self.extent.get(offset))
+        (self.f)(self.space.get(offset))
     }
 }
 
