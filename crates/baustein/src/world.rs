@@ -35,7 +35,7 @@ impl Extent for SdfChunk {
     type Voxel = Sd8;
 
     fn get(&self, offset: Index) -> Self::Voxel {
-        self[ChunkShape::linearize(offset.0.to_array()) as usize]
+        self[ChunkShape::linearize(offset.into()) as usize]
     }
 }
 
@@ -43,7 +43,7 @@ impl MutChunk for SdfChunk {
     type Voxel = Sd8;
     
     fn set(&mut self, offset: Index, value: Self::Voxel) {
-        self[ChunkShape::linearize(offset.0.to_array()) as usize] = value;
+        self[ChunkShape::linearize(offset.into()) as usize] = value;
     }
 }
 
@@ -51,7 +51,7 @@ impl Extent for PaletteIdChunk {
     type Voxel = PaletteId8;
 
     fn get(&self, offset: Index) -> Self::Voxel {
-        self[ChunkShape::linearize(offset.0.to_array()) as usize]
+        self[ChunkShape::linearize(offset.into()) as usize]
     }
 }
 
@@ -60,7 +60,7 @@ impl MutChunk for PaletteIdChunk {
     type Voxel = PaletteId8;
     
     fn set(&mut self, offset: Index, value: Self::Voxel) {
-        self[ChunkShape::linearize(offset.0.to_array()) as usize] = value;
+        self[ChunkShape::linearize(offset.into()) as usize] = value;
     }
 }
 
@@ -81,9 +81,9 @@ fn trunc(v: i32, thr: i32) -> i32 {
 impl World {
     fn to_chunk_index(index: Index) -> ChunkIndex {
         ChunkUnits(IVec3::new(
-            trunc(index.0[0], ChunkShape::ARRAY[0]),
-            trunc(index.0[1], ChunkShape::ARRAY[1]),
-            trunc(index.0[2], ChunkShape::ARRAY[2]),
+            trunc(index[0], ChunkShape::ARRAY[0]),
+            trunc(index[1], ChunkShape::ARRAY[1]),
+            trunc(index[2], ChunkShape::ARRAY[2]),
         ))
     }
 
@@ -98,7 +98,7 @@ impl World {
     fn get(&self, offset: Index) -> PaletteId8 {
         let ci = Self::to_chunk_index(offset);
         match self.chunks.get(&ci) {
-            Some(chunk) => chunk.get(VoxelUnits(offset.0 - ci.0)),
+            Some(chunk) => chunk.get(offset - VoxelUnits(ci.0)),
             None => Default::default(),
         }
     }
@@ -141,13 +141,13 @@ impl<'a> Cow<'a> {
 
     fn get(&self, offset: Index) -> PaletteId8 {
         let ci = World::to_chunk_index(offset);
-        self.get_chunk(ci).get(VoxelUnits(offset.0 - ci.0))
+        self.get_chunk(ci).get(offset - VoxelUnits(ci.0))
     }
 
     // Not sure if this is the right place to do this, but let's try.
     fn set(&mut self, offset: Index, value: PaletteId8) {
         let ci = World::to_chunk_index(offset);
-        let i = VoxelUnits(offset.0 - ci.0);
+        let i = offset - VoxelUnits(ci.0);
         let mut chunk = self.get_chunk_mut(ci);
         chunk.set(i, value);
     }
@@ -198,3 +198,29 @@ impl<'a> Cow<'a> {
         }
     }
 }
+
+
+struct View<'a, Shape> {
+    pub world: &'a World,
+    pub offset: Index,
+    pub shape: Shape,
+}
+
+impl<'a, S> View<'a, S>
+    where S: ConstShape<3, Coord=i32> + ndshape::Shape<3, Coord=i32>,
+{
+    fn to_vec(&self) -> Vec<PaletteId8> {
+        (0..S::SIZE)
+            .map(|i| self.shape.delinearize(i))
+            .map(|index| self.get(index.into()))
+            .collect()
+    }
+}
+
+impl<'a, S> Extent for View<'a, S> {
+    type Voxel = PaletteId8;
+    fn get(&self, offset: Index) -> Self::Voxel {
+        self.world.get(offset - VoxelUnits(self.offset.into()))
+    }
+}
+

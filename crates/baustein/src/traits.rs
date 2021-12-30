@@ -2,9 +2,49 @@
 use feldspar_core::glam::IVec3;
 
 use feldspar_map::chunk::CHUNK_SIZE;
-use feldspar_map::units::{ ChunkUnits, VoxelUnits };
+use feldspar_map::units::{ChunkUnits, VoxelUnits};
 
-pub type Index = VoxelUnits<IVec3>;
+use std::ops;
+
+/// Delberately not public inside,
+/// to be able to replace it in the future with a chunk+voxel combo
+#[derive(Clone, Copy)]
+pub struct WorldIndex(IVec3);
+
+impl ops::Index<usize> for WorldIndex {
+    type Output = i32;
+    fn index(&self, offset: usize) -> &i32 {
+        &self.0[offset]
+    }
+}
+
+impl From<[i32; 3]> for WorldIndex {
+    fn from(coords: [i32; 3]) -> Self {
+        Self(coords.into())
+    }
+}
+
+impl Into<[i32; 3]> for WorldIndex {
+    fn into(self) -> [i32; 3] {
+        self.0.into()
+    }
+}
+
+impl Into<IVec3> for WorldIndex {
+    fn into(self) -> IVec3 {
+        self.0.into()
+    }
+}
+
+impl ops::Sub<VoxelUnits<IVec3>> for WorldIndex {
+    type Output = WorldIndex;
+    fn sub(self, s: VoxelUnits<IVec3>) -> Self::Output {
+        WorldIndex(self.0 - s.0)
+    }
+}
+
+pub type Index = WorldIndex;
+
 pub type ChunkIndex = ChunkUnits<IVec3>;
 
 /// Actually just a chunk.
@@ -33,6 +73,14 @@ pub trait Extent {
         }
     }
 }
+/*
+impl<T, V, N> Into<[V; N]> for View
+    where T: Extent<Item=V>
+{
+    fn into(self) -> [V; N] {
+        self.
+    }
+}*/
 
 pub struct Map<E, F> {
     extent: E,
