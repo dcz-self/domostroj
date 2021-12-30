@@ -112,13 +112,13 @@ impl Space for World {
     }
 }
 
-struct Cow<'a> {
+pub struct Cow<'a> {
     base: &'a World,
     overlaid: HashMap<ChunkIndex, PaletteIdChunk>,
 }
 
 impl<'a> Cow<'a> {
-    fn new(base: &'a World) -> Self {
+    pub fn new(base: &'a World) -> Self {
         Cow {
             base,
             overlaid: Default::default(),
@@ -131,7 +131,7 @@ impl<'a> Cow<'a> {
     }
 
     // Not sure if this is the right place to do this, but let's try.
-    fn set(&mut self, offset: Index, value: PaletteId8) {
+    pub fn set(&mut self, offset: Index, value: PaletteId8) {
         let ci = ChunkIndex::new_encompassing(offset);
         let i = Index::new(ci.get_internal_offset(offset));
         let mut chunk = self.get_chunk_mut(ci);
@@ -175,7 +175,7 @@ impl<'a> Cow<'a> {
     }*/
 
     /// Extracts changes ready for application on a mutable world
-    pub fn changes(self) -> Overlay {
+    pub fn into_changes(self) -> Overlay {
         Overlay(self.overlaid)
     }
 }

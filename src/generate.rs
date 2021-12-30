@@ -15,6 +15,8 @@ use bevy::{
     window::{CreateWindow, WindowDescriptor, WindowId},
 };
 
+use baustein::world::{ World, Cow };
+
 /// This creates a second window with a different camera
 pub struct CameraPlugin;
 
@@ -214,4 +216,20 @@ fn eye_look_at_target_transform(eye: Vec3, target: Vec3) -> Transform {
     let look_at = eye + look_vector;
 
     Transform::from_translation(eye).looking_at(look_at, Vec3::Y)
+}
+
+pub fn test_world() -> World {
+    let world = World::default();
+    let mut cow = Cow::new(&world);
+    for x in 0..5 {
+        for y in 0..5 {
+            for z in 0..5 {
+                cow.set([x, y, z].into(), 1)
+            }
+        }
+    }
+    let changes = cow.into_changes();
+    let mut world = world;
+    changes.apply(&mut world);
+    world
 }

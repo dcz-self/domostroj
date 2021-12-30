@@ -1,5 +1,6 @@
 use crate::{
-    create_camera_entity, open_voxel_database, save_map_to_db, BevyConfig, CameraConfig,
+    create_camera_entity,
+    generate, open_voxel_database, save_map_to_db, BevyConfig, CameraConfig,
     CameraPlugin, Config, CursorPositionPlugin, EditToolsPlugin, ImmediateModePlugin,
     VoxelPickingPlugin,
 };
@@ -118,7 +119,10 @@ impl Plugin for EditorPlugin {
             // TODO: this should happen in veldspar proper as edits are made
             .add_system_set(
                 SystemSet::on_update(EditorState::Editing).with_system(save_map_to_db.system()),
-            );
+            )
+            // Generator
+            .insert_resource(generate::test_world())
+            ;
     }
 }
 

@@ -1,10 +1,11 @@
 /*! Rendering.
  * Depends on parts of feldspar's rendering pipeline. */
+use bevy::app;
 use bevy::prelude::*;
 use block_mesh::ndshape::ConstShape3u32;
 use block_mesh::{greedy_quads, GreedyQuadsBuffer, MergeVoxel, Voxel, RIGHT_HANDED_Y_UP_CONFIG};
 use feldspar::bb::mesh::PosNormMesh;
-use feldspar::prelude::{ChunkMeshes, MeshMaterial, SdfVoxelPalette, VoxelType};
+use feldspar::prelude::{ChunkMeshes, MeshMaterial, SdfVoxelPalette, VoxelType, VoxelTypeInfo, VoxelMaterial};
 use feldspar::renderer::create_voxel_mesh_bundle;
 use feldspar_core::glam::IVec3;
 use feldspar_map::palette::PaletteId8;
@@ -35,6 +36,39 @@ impl MergeVoxel for PaletteVoxel {
 }
 
 type ViewShape = ConstShape3u32::<18, 18, 18>;
+
+
+struct Plugin;
+
+impl app::Plugin for Plugin {
+    fn build(&self, app: &mut AppBuilder) {
+        app
+            .insert_resource(SdfVoxelPalette::new(vec![
+                VoxelTypeInfo {
+                    is_empty: true,
+                    material: VoxelMaterial::NULL,
+                },
+                VoxelTypeInfo {
+                    is_empty: false,
+                    material: VoxelMaterial(0),
+                },
+                VoxelTypeInfo {
+                    is_empty: false,
+                    material: VoxelMaterial(1),
+                },
+                VoxelTypeInfo {
+                    is_empty: false,
+                    material: VoxelMaterial(2),
+                },
+                VoxelTypeInfo {
+                    is_empty: false,
+                    material: VoxelMaterial(3),
+                },
+            ]))
+            .add_system(generate_meshes.system());
+    }
+}
+
 
 /// To track which parts should be despawned and when
 pub struct ChunkMesh;
