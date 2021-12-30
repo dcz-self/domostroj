@@ -106,12 +106,10 @@ impl ChunkIndex {
     }
 }
 
-/// Actually just a chunk.
-/// TODO:
-/// Access to elements of a 3d dense cuboid region of voxels.
-/// Should be used for chunks, may be used for the world.
+/// Access to elements of a 3d cuboid region of voxels.
+/// Should be used for arbitrary (small) cuboids, may be used for the world.
 /// It cannot be modified in place, instead replace the entire chunk.
-pub trait Extent {
+pub trait Space {
     type Voxel: Copy;
     
     fn get(&self, offset: Index) -> Self::Voxel;
@@ -134,7 +132,7 @@ pub trait Extent {
 }
 /*
 impl<T, V, N> Into<[V; N]> for View
-    where T: Extent<Item=V>
+    where T: Space<Item=V>
 {
     fn into(self) -> [V; N] {
         self.
@@ -146,7 +144,7 @@ pub struct Map<E, F> {
     f: F,
 }
 
-impl<T: Copy, E: Extent, F> Extent for Map<E, F>
+impl<T: Copy, E: Space, F> Space for Map<E, F>
     where F: Fn(E::Voxel) -> T,
 {
     type Voxel = T;
@@ -162,7 +160,7 @@ pub struct MapIndex<E, F> {
     f: F,
 }
 
-impl<T: Copy, E: Extent, F> Extent for MapIndex<E, F>
+impl<T: Copy, E: Space, F> Space for MapIndex<E, F>
     where F: Fn(Index, E::Voxel) -> T,
 {
     type Voxel = T;
@@ -180,7 +178,7 @@ pub trait MutChunk {
 
 /*
 /// Iterate over chunks.
-trait World<C: Extent> {
+trait World<C: Space> {
     fn get(&self, offset: VoxelUnits) -> &C;
     fn set(&mut self, offset: VoxelUnits, C);
     fn chunks(&self) -> ChunkIter<C>;

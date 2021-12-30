@@ -6,12 +6,12 @@ use feldspar_map::chunk::{ Chunk, ChunkShape, SdfChunk, PaletteIdChunk };
 use feldspar_map::units::{ ChunkUnits, VoxelUnits };
 use ndshape::ConstShape;
 use std::collections::HashMap;
-use crate::traits::{Extent, MutChunk, Index, ChunkIndex};
+use crate::traits::{Space, WorldIndex, MutChunk, Index, ChunkIndex};
 
 
 type Voxel = (Sd8, PaletteId8);
 
-impl Extent for Chunk {
+impl Space for Chunk {
     type Voxel = Voxel;
 
     fn get(&self, offset: Index) -> Self::Voxel {
@@ -31,7 +31,7 @@ impl MutChunk for Chunk {
     }
 }
 
-impl Extent for SdfChunk {
+impl Space for SdfChunk {
     type Voxel = Sd8;
 
     fn get(&self, offset: Index) -> Self::Voxel {
@@ -47,7 +47,7 @@ impl MutChunk for SdfChunk {
     }
 }
 
-impl Extent for PaletteIdChunk {
+impl Space for PaletteIdChunk {
     type Voxel = PaletteId8;
 
     fn get(&self, offset: Index) -> Self::Voxel {
@@ -79,14 +79,6 @@ fn trunc(v: i32, thr: i32) -> i32 {
 }
 
 impl World {
-    fn get(&self, offset: Index) -> PaletteId8 {
-        let ci = ChunkIndex::new_encompassing(offset);
-        match self.chunks.get(&ci) {
-            Some(chunk) => chunk.get(Index::new(ci.get_internal_offset(offset))),
-            None => Default::default(),
-        }
-    }
-
     fn get_chunk(&self, offset: ChunkIndex) -> PaletteIdChunk {
         *self.chunks.get(&offset).clone().unwrap_or(&[0; 4096])
     }
@@ -105,6 +97,17 @@ impl World {
 
     fn cow<'a>(&'a self) -> Cow<'a> {
         Cow::new(&self)
+    }
+}
+
+impl Space for World {
+    type Voxel = PaletteId8;
+    fn get(&self, offset: WorldIndex) -> Self::Voxel {
+        let ci = ChunkIndex::new_encompassing(offset);
+        match self.chunks.get(&ci) {
+            Some(chunk) => chunk.get(Index::new(ci.get_internal_offset(offset))),
+            None => Default::default(),
+        }
     }
 }
 
@@ -193,7 +196,7 @@ fn to_i32_arr(a: [u32; 3]) -> [i32; 3] {
 
 impl<'a, Shape, S> View<'a, S, Shape>
     where
-        S: Extent<Voxel=PaletteId8>,
+        S: Space<Voxel=PaletteId8>,
         Shape: ConstShape<3, Coord=u32> + ndshape::Shape<3, Coord=u32>,
 {
     pub fn new(space: &'a S, offset: Index) -> Self {
@@ -215,7 +218,7 @@ impl<'a, Shape, S> View<'a, S, Shape>
     }
 }
 
-impl<'a, S: Extent, Space> Extent for View<'a, S, Space> {
+impl<'a, S: Space, Shape> Space for View<'a, S, Shape> {
     type Voxel = S::Voxel;
     fn get(&self, offset: Index) -> Self::Voxel {
         self.world.get(offset - VoxelUnits(self.offset.into()))
