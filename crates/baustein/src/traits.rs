@@ -11,7 +11,7 @@ use ndshape::ConstShape;
 
 /// Delberately not public inside,
 /// to be able to replace it in the future with a chunk+voxel combo
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct WorldIndex(IVec3);
 
 impl WorldIndex {
@@ -75,7 +75,7 @@ pub type ChunkShape = ndshape::ConstShape3u32<16, 16, 16>;
 /// This is really slow, we already know chunk coords are pow2.
 /// Thankfully the threshold is known, so this will likely optimize out.
 fn trunc(v: i32, thr: u32) -> i32 {
-    let r = v % thr as i32;
+    let r = v.rem_euclid(thr as i32);
     v - r
 }
 
@@ -188,10 +188,16 @@ pub trait MutChunk {
     fn set(&mut self, offset: Index, value: Self::Voxel);
 }
 
-/*
-/// Iterate over chunks.
-trait World<C: Space> {
-    fn get(&self, offset: VoxelUnits) -> &C;
-    fn set(&mut self, offset: VoxelUnits, C);
-    fn chunks(&self) -> ChunkIter<C>;
-}*/
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn neg_index() {
+        assert_eq!(
+            ChunkIndex::new_encompassing([-1, -1, -1].into()),
+            ChunkIndex([-16, -16, -16].into()),
+        );
+    }
+}
