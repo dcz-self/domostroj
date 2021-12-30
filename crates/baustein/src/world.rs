@@ -6,6 +6,7 @@ use feldspar_map::chunk::{ Chunk, ChunkShape, SdfChunk, PaletteIdChunk };
 use feldspar_map::units::{ ChunkUnits, VoxelUnits };
 use ndshape::ConstShape;
 use std::collections::HashMap;
+use crate::indices::to_i32_arr;
 use crate::traits::{Space, WorldIndex, MutChunk, Index, ChunkIndex};
 
 
@@ -183,15 +184,23 @@ impl<'a> Cow<'a> {
 
 use std::marker::PhantomData;
 
-#[derive(Clone, Copy)]
 pub struct View<'a, S, Shape> {
     pub world: &'a S,
     pub offset: Index,
     pub shape: PhantomData<Shape>,
 }
 
-fn to_i32_arr(a: [u32; 3]) -> [i32; 3] {
-    [a[0] as i32, a[1] as i32, a[2] as i32]
+/// This is redundant, but derive(Clone) complains that the concrete type under S is not Clone.
+/// Which is nonsense: S is bbehind a reference, and cannot be deep-cloned.
+/// Where would the copy be stored? It'd be dropped instantly.
+impl<'a, Shape, S, V> Clone for View<'a, S, Shape>
+    where
+    S: Space<Voxel=V>,
+    Shape: ConstShape<3, Coord=u32> + ndshape::Shape<3, Coord=u32>,
+{
+    fn clone(&self) -> Self {
+        Self::new(self.world.clone(), self.offset.clone())
+    }
 }
 
 impl<'a, Shape, S, V> View<'a, S, Shape>

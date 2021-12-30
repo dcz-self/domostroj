@@ -1,6 +1,5 @@
 /*! Traits for easy access to voxels */
 use feldspar_core::glam::IVec3;
-use feldspar_map::chunk::CHUNK_SIZE;
 use feldspar_map::units::{ChunkUnits, VoxelUnits};
 use ndshape;
 
@@ -138,7 +137,7 @@ impl<V, T> Space for &T
 {
     type Voxel = V;
     fn get(&self, offset: Index) -> Self::Voxel {
-        self.get(offset)
+        (*self).get(offset)
     }
 }
 /*
