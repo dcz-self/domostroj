@@ -11,7 +11,7 @@ use feldspar_core::glam::IVec3;
 use feldspar_map::palette::PaletteId8;
 use feldspar_map::units::VoxelUnits;
 
-use crate::indices::{ to_i32_arr, to_u32_arr };
+use crate::indices::to_i32_arr;
 use crate::traits::{ChunkIndex, Space};
 use crate::world::{World, View};
 
@@ -99,8 +99,12 @@ pub fn generate_meshes(
                         &mut meshes,
                     )
                 )
+                .insert(Transform::from_translation(
+                    index
+                        .get_world_offset()
+                        .into()
+                ))
                 .insert(ChunkMesh)
-                //FIXME: transform
                 ;
         }
     }

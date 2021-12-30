@@ -1,4 +1,5 @@
 /*! Traits for easy access to voxels */
+use bevy::prelude::Vec3;
 use feldspar_core::glam::IVec3;
 use feldspar_map::units::{ChunkUnits, VoxelUnits};
 use ndshape;
@@ -48,6 +49,12 @@ impl Into<[i32; 3]> for WorldIndex {
 impl Into<IVec3> for WorldIndex {
     fn into(self) -> IVec3 {
         self.0.into()
+    }
+}
+
+impl Into<Vec3> for WorldIndex {
+    fn into(self) -> Vec3 {
+        Vec3::new(self.0.x as f32, self.0.y as f32, self.0.z as f32)
     }
 }
 
