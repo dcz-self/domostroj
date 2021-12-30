@@ -187,8 +187,12 @@ pub struct View<'a, Shape> {
     pub shape: PhantomData<Shape>,
 }
 
+fn to_i32_arr(a: [u32; 3]) -> [i32; 3] {
+    [a[0] as i32, a[1] as i32, a[2] as i32]
+}
+
 impl<'a, S> View<'a, S>
-    where S: ConstShape<3, Coord=i32> + ndshape::Shape<3, Coord=i32>,
+    where S: ConstShape<3, Coord=u32> + ndshape::Shape<3, Coord=u32>,
 {
     pub fn new(world: &'a World, offset: Index) -> Self {
         Self {
@@ -200,12 +204,12 @@ impl<'a, S> View<'a, S>
     pub fn into_vec(self) -> Vec<PaletteId8> {
         (0..S::SIZE)
             .map(|i| <S as ConstShape<3>>::delinearize(i))
-            .map(|index| self.get(index.into()))
+            .map(|index| self.get(to_i32_arr(index).into()))
             .collect()
     }
 
     pub fn opposite_corner(&self) -> Index {
-        self.offset + VoxelUnits(S::ARRAY.into())
+        self.offset + VoxelUnits(to_i32_arr(S::ARRAY).into())
     }
 }
 
