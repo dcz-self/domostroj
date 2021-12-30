@@ -1,15 +1,25 @@
 /*! Traits for easy access to voxels */
 use feldspar_core::glam::IVec3;
-
 use feldspar_map::chunk::CHUNK_SIZE;
 use feldspar_map::units::{ChunkUnits, VoxelUnits};
+use ndshape;
 
 use std::ops;
+
+// Traits
+use ndshape::ConstShape;
+
 
 /// Delberately not public inside,
 /// to be able to replace it in the future with a chunk+voxel combo
 #[derive(Clone, Copy)]
 pub struct WorldIndex(IVec3);
+
+impl WorldIndex {
+    pub fn new(offset: VoxelUnits<IVec3>) -> Self {
+        Self(offset.0)
+    }
+}
 
 impl ops::Index<usize> for WorldIndex {
     type Output = i32;
@@ -20,6 +30,12 @@ impl ops::Index<usize> for WorldIndex {
 
 impl From<[i32; 3]> for WorldIndex {
     fn from(coords: [i32; 3]) -> Self {
+        Self(coords.into())
+    }
+}
+
+impl From<IVec3> for WorldIndex {
+    fn from(coords: IVec3) -> Self {
         Self(coords.into())
     }
 }
@@ -43,9 +59,52 @@ impl ops::Sub<VoxelUnits<IVec3>> for WorldIndex {
     }
 }
 
+impl ops::Add<VoxelUnits<IVec3>> for WorldIndex {
+    type Output = WorldIndex;
+    fn add(self, s: VoxelUnits<IVec3>) -> Self::Output {
+        WorldIndex(self.0 + s.0)
+    }
+}
+
 pub type Index = WorldIndex;
 
-pub type ChunkIndex = ChunkUnits<IVec3>;
+#[derive(Clone, Copy, Hash, PartialEq, Eq)]
+pub struct ChunkIndex(IVec3);
+
+pub type ChunkShape = ndshape::ConstShape3u32<16, 16, 16>;
+
+/// This is really slow, we already know chunk coords are pow2.
+/// Thankfully the threshold is known, so this will likely optimize out.
+fn trunc(v: i32, thr: u32) -> i32 {
+    let r = v % thr as i32;
+    v - r
+}
+
+impl ChunkIndex {
+    fn center() -> Self {
+        Self(IVec3::new(0, 0, 0))
+    }
+
+    /// Returns the index of the chunk, to which the world index belongs.
+    pub fn new_encompassing(index: WorldIndex) -> Self {
+        Self(IVec3::new(
+            trunc(index.0[0], ChunkShape::ARRAY[0]),
+            trunc(index.0[1], ChunkShape::ARRAY[1]),
+            trunc(index.0[2], ChunkShape::ARRAY[2]),
+        ))
+    }
+
+    /// Returns the offset (minimum in all dimensions),
+    /// at which this chunk begins.
+    pub fn get_world_offset(&self) -> WorldIndex {
+        self.0.into()
+    }
+
+    /// Offset relative to the beginning of the chunk.
+    pub fn get_internal_offset(&self, index: WorldIndex) -> VoxelUnits<IVec3> {
+        VoxelUnits(index.0 - Self::new_encompassing(index).0)
+    }
+}
 
 /// Actually just a chunk.
 /// TODO:

@@ -68,7 +68,7 @@ impl MutChunk for PaletteIdChunk {
 /// What do I want from the world?
 /// Definitely not direct mutability. Use the Cow.
 #[derive(Default)]
-struct World {
+pub struct World {
     chunks: HashMap<ChunkIndex, PaletteIdChunk>,
 }
 
@@ -79,38 +79,20 @@ fn trunc(v: i32, thr: i32) -> i32 {
 }
 
 impl World {
-    fn to_chunk_index(index: Index) -> ChunkIndex {
-        ChunkUnits(IVec3::new(
-            trunc(index[0], ChunkShape::ARRAY[0]),
-            trunc(index[1], ChunkShape::ARRAY[1]),
-            trunc(index[2], ChunkShape::ARRAY[2]),
-        ))
-    }
-
-    fn truncate_chunk_index(index: ChunkIndex) -> ChunkIndex {
-        ChunkUnits(IVec3::new(
-            trunc(index.0[0], ChunkShape::ARRAY[0]),
-            trunc(index.0[1], ChunkShape::ARRAY[1]),
-            trunc(index.0[2], ChunkShape::ARRAY[2]),
-        ))
-    }
-    
     fn get(&self, offset: Index) -> PaletteId8 {
-        let ci = Self::to_chunk_index(offset);
+        let ci = ChunkIndex::new_encompassing(offset);
         match self.chunks.get(&ci) {
-            Some(chunk) => chunk.get(offset - VoxelUnits(ci.0)),
+            Some(chunk) => chunk.get(Index::new(ci.get_internal_offset(offset))),
             None => Default::default(),
         }
     }
 
     fn get_chunk(&self, offset: ChunkIndex) -> PaletteIdChunk {
-        let ci = Self::truncate_chunk_index(offset);
-        *self.chunks.get(&ci).clone().unwrap_or(&[0; 4096])
+        *self.chunks.get(&offset).clone().unwrap_or(&[0; 4096])
     }
     
     fn get_chunk_ref(&self, offset: ChunkIndex) -> &PaletteIdChunk {
-        let ci = Self::truncate_chunk_index(offset);
-        self.chunks.get(&ci).clone().unwrap_or(&[0; 4096])
+        self.chunks.get(&offset).clone().unwrap_or(&[0; 4096])
     }
 
     fn iter_chunks(&self) -> impl Iterator<Item=(ChunkIndex, &PaletteIdChunk)> {
@@ -140,38 +122,35 @@ impl<'a> Cow<'a> {
     }
 
     fn get(&self, offset: Index) -> PaletteId8 {
-        let ci = World::to_chunk_index(offset);
-        self.get_chunk(ci).get(offset - VoxelUnits(ci.0))
+        let ci = ChunkIndex::new_encompassing(offset);
+        self.get_chunk(ci).get(Index::new(ci.get_internal_offset(offset)))
     }
 
     // Not sure if this is the right place to do this, but let's try.
     fn set(&mut self, offset: Index, value: PaletteId8) {
-        let ci = World::to_chunk_index(offset);
-        let i = offset - VoxelUnits(ci.0);
+        let ci = ChunkIndex::new_encompassing(offset);
+        let i = Index::new(ci.get_internal_offset(offset));
         let mut chunk = self.get_chunk_mut(ci);
         chunk.set(i, value);
     }
 
     fn get_chunk(&self, offset: ChunkIndex) -> PaletteIdChunk {
-        let ci = World::truncate_chunk_index(offset);
-        *self.overlaid.get(&ci)
-            .unwrap_or(&self.base.get_chunk(ci))
+        *self.overlaid.get(&offset)
+            .unwrap_or(&self.base.get_chunk(offset))
     }
 
     fn get_chunk_ref(&self, offset: ChunkIndex) -> &PaletteIdChunk {
-        let ci = World::truncate_chunk_index(offset);
-        self.overlaid.get(&ci)
-            .unwrap_or(self.base.get_chunk_ref(ci))
+        self.overlaid.get(&offset)
+            .unwrap_or(self.base.get_chunk_ref(offset))
     }
 
     fn get_chunk_mut(&mut self, offset: ChunkIndex) -> &mut PaletteIdChunk {
-        let ci = World::truncate_chunk_index(offset);
-        self.overlaid.entry(ci).or_insert_with(|| self.base.get_chunk(ci))
+        self.overlaid.entry(offset)
+            .or_insert_with(|| self.base.get_chunk(offset))
     }
 
     fn set_chunk(&mut self, offset: ChunkIndex, chunk: PaletteIdChunk) {
-        let ci = World::truncate_chunk_index(offset);
-        self.overlaid.insert(ci, chunk);
+        self.overlaid.insert(offset, chunk);
     }
 
     fn iter_chunks(&self) -> impl Iterator<Item=(ChunkIndex, &PaletteIdChunk)> {
@@ -199,21 +178,34 @@ impl<'a> Cow<'a> {
     }
 }
 
+use std::marker::PhantomData;
 
-struct View<'a, Shape> {
+#[derive(Clone, Copy)]
+pub struct View<'a, Shape> {
     pub world: &'a World,
     pub offset: Index,
-    pub shape: Shape,
+    pub shape: PhantomData<Shape>,
 }
 
 impl<'a, S> View<'a, S>
     where S: ConstShape<3, Coord=i32> + ndshape::Shape<3, Coord=i32>,
 {
-    fn to_vec(&self) -> Vec<PaletteId8> {
+    pub fn new(world: &'a World, offset: Index) -> Self {
+        Self {
+            world,
+            offset,
+            shape: Default::default(),
+        }
+    }
+    pub fn into_vec(self) -> Vec<PaletteId8> {
         (0..S::SIZE)
-            .map(|i| self.shape.delinearize(i))
+            .map(|i| <S as ConstShape<3>>::delinearize(i))
             .map(|index| self.get(index.into()))
             .collect()
+    }
+
+    pub fn opposite_corner(&self) -> Index {
+        self.offset + VoxelUnits(S::ARRAY.into())
     }
 }
 

@@ -199,6 +199,7 @@ checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 name = "baustein"
 version = "0.1.0"
 dependencies = [
+ "block-mesh",
  "building_blocks_mesh 0.7.1",
  "feldspar",
  "feldspar-core",
@@ -733,6 +734,16 @@ name = "block"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0d8c1fef690941d3e7788d328517591fecc684c084084702d6ff1641e993699a"
+
+[[package]]
+name = "block-mesh"
+version = "0.1.0"
+source = "git+https://github.com/bonsairobo/block-mesh-rs?rev=e8a81d1#e8a81d14c351485b7459701f50fafe53ff0222fb"
+dependencies = [
+ "ilattice 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ndcopy",
+ "ndshape 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "building-blocks"
@@ -1289,7 +1300,7 @@ version = "0.1.0"
 dependencies = [
  "ahash 0.7.6",
  "approx 0.5.0",
- "ilattice",
+ "ilattice 0.1.0 (git+https://github.com/bonsairobo/ilattice-rs?branch=main)",
  "rkyv",
  "slab",
  "static_assertions",
@@ -1702,6 +1713,12 @@ checksum = "3abb554f8ee44336b72d522e0a7fe86a29e09f839a36022fa869a7dfe941a54b"
 
 [[package]]
 name = "glam"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b8509e6791516e81c1a630d0bd7fbac36d2fa8712a9da8662e716b52d5051ca"
+
+[[package]]
+name = "glam"
 version = "0.20.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4fa84eead97d5412b2a20aed4d66612a97a9e41e08eababdb9ae2bf88667490"
@@ -1775,7 +1792,7 @@ name = "grid-ray"
 version = "0.1.0"
 source = "git+https://github.com/bonsairobo/grid-ray-rs?branch=main#21808fea5ce12586c898e5b2adabfe11d75b0291"
 dependencies = [
- "ilattice",
+ "ilattice 0.1.0 (git+https://github.com/bonsairobo/ilattice-rs?branch=main)",
 ]
 
 [[package]]
@@ -1863,6 +1880,15 @@ name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
+
+[[package]]
+name = "ilattice"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f3db9046391c0e0658a18e23877706d16e48cc8b4711702b9f703776410c2b84"
+dependencies = [
+ "glam 0.19.0",
+]
 
 [[package]]
 name = "ilattice"
@@ -2315,6 +2341,15 @@ dependencies = [
  "slab",
  "slotmap 1.0.6",
  "smallvec",
+]
+
+[[package]]
+name = "ndcopy"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6afc977f2364b373136a0f8e25719059eea83b87619e5a02404c8332d7e4b868"
+dependencies = [
+ "ndshape 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

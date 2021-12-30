@@ -10,14 +10,20 @@ building_blocks_mesh = "*" # depend on feldspar's version
 feldspar-core = {path = "../../../feldspar/crates/feldspar-core"}
 feldspar-map = {path = "../../../feldspar/crates/feldspar-map"}
 
-[dependencies.ndshape]
-git = "https://github.com/bonsairobo/ndshape-rs"
-rev = "8fd240e"
+[dependencies.block-mesh]
+git = "https://github.com/bonsairobo/block-mesh-rs"
+# branch = "main"
+rev = "e8a81d1"
 
 [dependencies.feldspar] # same as domostroj
 git = "https://github.com/bonsairobo/feldspar"
 # branch = "main"
 rev = "e09001c1"
+
+[dependencies.ndshape]
+git = "https://github.com/bonsairobo/ndshape-rs"
+rev = "8fd240e"
+
 
 [patch.'https://github.com/bonsairobo/feldspar']
 feldspar = { path = "../../../feldspar" }
