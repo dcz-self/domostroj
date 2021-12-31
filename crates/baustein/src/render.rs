@@ -10,14 +10,21 @@ use feldspar::renderer::create_voxel_mesh_bundle;
 use feldspar_core::glam::IVec3;
 use feldspar_map::palette::PaletteId8;
 use feldspar_map::units::VoxelUnits;
+use std::fmt;
 
 use crate::indices::to_i32_arr;
 use crate::traits::{ChunkIndex, Space};
 use crate::world::{World, View};
 
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 struct PaletteVoxel(PaletteId8);
+
+impl fmt::Debug for PaletteVoxel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        self.0.fmt(f)
+    }
+}
 
 impl Voxel for PaletteVoxel {
     fn is_empty(&self) -> bool {
@@ -87,7 +94,7 @@ pub fn generate_meshes(
     }
     // And create the occupied ones again.
     // Wasteful, I know. I'm testing!
-    for (index, chunk) in world.iter_chunks() {
+    for index in world.iter_chunk_indices() {
         let mesh = generate_mesh_for_chunk(&world, &palette, index);
         if let Some((mesh, materials)) = mesh {
             commands

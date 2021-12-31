@@ -221,9 +221,9 @@ fn eye_look_at_target_transform(eye: Vec3, target: Vec3) -> Transform {
 pub fn test_world() -> World {
     let world = World::default();
     let mut cow = Cow::new(&world);
-    for x in 0..5 {
-        for y in 0..5 {
-            for z in 0..5 {
+    for x in -2..5 {
+        for y in -2..5 {
+            for z in -2..5 {
                 cow.set([x, y, z].into(), 1)
             }
         }
