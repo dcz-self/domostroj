@@ -3,11 +3,12 @@
 mod feldspar;
 
 use block_mesh::{ MergeVoxel, Voxel };
-use feldspar_map::chunk::ChunkShape;
 use feldspar_map::palette::PaletteId8;
+use ndshape::ConstPow2Shape3u32;
 use std::collections::HashMap;
 use std::fmt;
 
+use crate::indices::{ to_i32_arr, to_u32_arr};
 use crate::traits::{ ChunkIndex, Index, IterableSpace, MutChunk, Space, WorldIndex };
 use crate::world::Cow;
 
@@ -15,12 +16,15 @@ use crate::world::Cow;
 use ndshape::ConstShape;
 
 
+pub type ChunkShape = ConstPow2Shape3u32<4, 4, 4>;
+
+
 /// The voxel that maps to a palette entry.
 #[derive(Clone, Copy, PartialEq, Default)]
 pub struct PaletteVoxel(pub PaletteId8);
 
 impl PaletteVoxel {
-    const EMPTY: PaletteVoxel = PaletteVoxel(0);
+    pub const EMPTY: PaletteVoxel = PaletteVoxel(0);
 }
 
 impl fmt::Debug for PaletteVoxel {
@@ -62,7 +66,7 @@ impl Space for PaletteIdChunk {
     type Voxel = PaletteVoxel;
 
     fn get(&self, offset: Index) -> Self::Voxel {
-        self.0[ChunkShape::linearize(offset.into()) as usize]
+        self.0[ChunkShape::linearize(to_u32_arr(offset.into())) as usize]
     }
 }
 
@@ -70,7 +74,7 @@ impl MutChunk for PaletteIdChunk {
     type Voxel = PaletteVoxel;
     
     fn set(&mut self, offset: Index, value: Self::Voxel) {
-        self.0[ChunkShape::linearize(offset.into()) as usize] = value;
+        self.0[ChunkShape::linearize(to_u32_arr(offset.into())) as usize] = value;
     }
 }
 
@@ -78,13 +82,12 @@ impl IterableSpace for PaletteIdChunk {
     fn visit_indices<F: FnMut(Index)>(&self, mut f: F) {
         (0..ChunkShape::SIZE)
             .map(|i| <ChunkShape as ConstShape<3>>::delinearize(i))
-            .map(|index| index.into())
+            .map(|index| to_i32_arr(index).into())
             .for_each(f);
     }
 }
 
 
-use crate::indices::to_i32_arr;
 impl<T> IterableSpace for T where T: ConstShape<3, Coord=u32> {
     fn visit_indices<F: FnMut(Index)>(&self, mut f: F) {
         (0..T::SIZE)
@@ -156,7 +159,7 @@ mod test {
         type Shape = ConstPow2Shape3u32<1, 1, 1>;
         let shape = Shape {};
         let mut indices = HashSet::new();
-        shape.visit_indices(|i| { indices.insert(i); });
+        shape.visit_indices(|i| { indices.insert(i);     });
         assert_eq!(
             indices,
             hashset!(

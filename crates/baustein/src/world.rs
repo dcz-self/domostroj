@@ -1,14 +1,10 @@
 /*! Voxel storage */
-use feldspar_core::glam::IVec3;
-
-use feldspar_map::chunk::{ Chunk, ChunkShape, SdfChunk };
-use feldspar_map::palette::PaletteId8;
 use feldspar_map::units::{ ChunkUnits, VoxelUnits };
 use ndshape::ConstShape;
 use std::collections::HashMap;
 use crate::indices::to_i32_arr;
 use crate::prefab::{ PaletteIdChunk, PaletteVoxel, World };
-use crate::traits::{Space, WorldIndex, MutChunk, Index, ChunkIndex};
+use crate::traits::{Space, MutChunk, Index, IterableSpace, ChunkIndex};
 
 
 /// A naive copy-on-write overlay over a World.
@@ -141,6 +137,12 @@ impl<'a, S: Space, Shape> Space for View<'a, S, Shape> {
     type Voxel = S::Voxel;
     fn get(&self, offset: Index) -> Self::Voxel {
         self.world.get(offset + VoxelUnits(self.offset.into()))
+    }
+}
+
+impl<'a, S: IterableSpace, Shape> IterableSpace for View<'a, S, Shape> {
+    fn visit_indices<F: FnMut(Index)>(&self, mut f: F) {
+        self.world.visit_indices(|i| f(i - VoxelUnits(self.offset.into())))
     }
 }
 

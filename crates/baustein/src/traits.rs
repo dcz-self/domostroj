@@ -209,6 +209,15 @@ pub trait IterableSpace {
     fn visit_indices<F: FnMut(Index)>(&self, f: F);
 }
 
+/*
+impl<T> IterableSpace for &T
+    where
+    T: IterableSpace,
+{
+    fn visit_indices<F: FnMut(Index)>(&self, f: F) {
+        (*self).visit_indices(f)
+    }
+}*/
 // TODO: a Chunk trait should include the shape.
 // a World trait should include the grid
 

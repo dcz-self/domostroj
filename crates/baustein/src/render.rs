@@ -110,21 +110,27 @@ pub fn generate_transformeshes(
         commands.entity(cm).despawn()
     }
 
-
-
     for (space, transform) in ts_spaces.iter() {
         let mut world = World::default();
         let mut overlay = Cow::new(&world);
+        let centered = View::<_, ndshape::ConstShape3u32<18, 18, 18>>::new(
+            space,
+            [9, 9, 9].into(),
+        );
         // This is kind of lousy, may have holes inside.
         // It would have been better to perform the inverse transformation,
         // but the API would have to expose source's occupancy.
-        space.visit_indices(|index| {
-            let voxel = space.get(index);
-            let index = transform.mul_vec3(index.into());
-            overlay.set(index.into(), voxel)
+        centered.visit_indices(|index| {
+            let voxel = centered.get(index);
+            let tf_index = transform.mul_vec3(index.into());
+            if voxel != PaletteVoxel::EMPTY {
+                //dbg!(index);
+                overlay.set(tf_index.into(), voxel);
+            }
         });
         let changes = overlay.into_changes();
         changes.apply(&mut world);
+        //dbg!(world.get([13, 10, 11].into()));
         // Screw accuracy. Alien chunks can only be close to the middle.
         let view = View::<_, ndshape::ConstShape3u32<18, 18, 18>>::new(
             &world,
@@ -147,6 +153,7 @@ pub fn generate_transformeshes(
                 ;
         }
     }
+    //panic!()
 }
 
 fn generate_greedy_buffer<V, S, Shape>(
