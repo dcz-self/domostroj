@@ -92,7 +92,7 @@ impl World {
         self.chunks.iter().map(|(offset, chunk)| (offset.clone(), chunk))
     }
 
-    fn iter_chunk_indices<'a>(&'a self) -> impl Iterator<Item=ChunkIndex> + 'a {
+    pub fn iter_chunk_indices<'a>(&'a self) -> impl Iterator<Item=ChunkIndex> + 'a {
         self.chunks.keys().cloned()
     }
 
@@ -239,7 +239,35 @@ impl<'a, Shape, S, V> View<'a, S, Shape>
 impl<'a, S: Space, Shape> Space for View<'a, S, Shape> {
     type Voxel = S::Voxel;
     fn get(&self, offset: Index) -> Self::Voxel {
-        self.world.get(offset - VoxelUnits(self.offset.into()))
+        self.world.get(offset + VoxelUnits(self.offset.into()))
     }
 }
 
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn cow_apply_neg() {
+        let world = World::default();
+        let mut cow = Cow::new(&world);
+        cow.set([-1, -1, -1].into(), 1);
+        let changes = cow.into_changes();
+        let mut world = world;
+        changes.apply(&mut world);
+        assert_eq!(world.get([-1, -1, -1].into()), 1);
+    }
+
+    #[test]
+    fn view_neg() {
+        let world = World::default();
+        let mut cow = Cow::new(&world);
+        cow.set([-1, -1, -1].into(), 1);
+        let changes = cow.into_changes();
+        let mut world = world;
+        changes.apply(&mut world);
+        let view = View::<_, ndshape::ConstShape3u32<2, 2, 2>>::new(&world, [-2, -2, -2].into());
+        assert_eq!(view.get([1, 1, 1].into()), 1);
+    }
+    
+}
