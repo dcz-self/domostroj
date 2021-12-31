@@ -10,7 +10,7 @@ bevy = { version = "0.5", default-features = false }
 building_blocks_mesh = "*" # depend on feldspar's version
 feldspar-core = {path = "../../../feldspar/crates/feldspar-core"}
 feldspar-map = {path = "../../../feldspar/crates/feldspar-map"}
-
+maplit = "1.0"
 
 [dependencies.block-mesh]
 git = "https://github.com/bonsairobo/block-mesh-rs"

@@ -12,7 +12,7 @@ use ndshape::ConstShape;
 
 /// Delberately not public inside,
 /// to be able to replace it in the future with a chunk+voxel combo
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct WorldIndex(IVec3);
 
 impl WorldIndex {

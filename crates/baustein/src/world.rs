@@ -152,23 +152,23 @@ mod test {
     fn cow_apply_neg() {
         let world = World::default();
         let mut cow = Cow::new(&world);
-        cow.set([-1, -1, -1].into(), 1);
+        cow.set([-1, -1, -1].into(), PaletteVoxel(1));
         let changes = cow.into_changes();
         let mut world = world;
         changes.apply(&mut world);
-        assert_eq!(world.get([-1, -1, -1].into()), 1);
+        assert_eq!(world.get([-1, -1, -1].into()), PaletteVoxel(1));
     }
 
     #[test]
     fn view_neg() {
         let world = World::default();
         let mut cow = Cow::new(&world);
-        cow.set([-1, -1, -1].into(), 1);
+        cow.set([-1, -1, -1].into(), PaletteVoxel(1));
         let changes = cow.into_changes();
         let mut world = world;
         changes.apply(&mut world);
         let view = View::<_, ndshape::ConstShape3u32<2, 2, 2>>::new(&world, [-2, -2, -2].into());
-        assert_eq!(view.get([1, 1, 1].into()), 1);
+        assert_eq!(view.get([1, 1, 1].into()), PaletteVoxel(1));
     }
     
 }

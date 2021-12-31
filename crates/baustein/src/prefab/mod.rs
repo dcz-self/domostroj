@@ -79,10 +79,20 @@ impl IterableSpace for PaletteIdChunk {
         (0..ChunkShape::SIZE)
             .map(|i| <ChunkShape as ConstShape<3>>::delinearize(i))
             .map(|index| index.into())
-            .map(f);
+            .for_each(f);
     }
 }
 
+
+use crate::indices::to_i32_arr;
+impl<T> IterableSpace for T where T: ConstShape<3, Coord=u32> {
+    fn visit_indices<F: FnMut(Index)>(&self, mut f: F) {
+        (0..T::SIZE)
+            .map(|i| T::delinearize(i))
+            .map(|index| to_i32_arr(index).into())
+            .for_each(f);
+    }
+}
 
 /// A really terrible, simple world type
 /// What do I want from the world?
@@ -130,5 +140,35 @@ impl Space for World {
             Some(chunk) => chunk.get(Index::new(ci.get_internal_offset(offset))),
             None => Default::default(),
         }
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use maplit::hashset;
+    use std::collections::HashSet;
+
+    #[test]
+    fn test_iterable_chunk() {
+        use ndshape::ConstPow2Shape3u32;
+        type Shape = ConstPow2Shape3u32<1, 1, 1>;
+        let shape = Shape {};
+        let mut indices = HashSet::new();
+        shape.visit_indices(|i| { indices.insert(i); });
+        assert_eq!(
+            indices,
+            hashset!(
+                [0, 0, 0].into(),
+                [0, 0, 1].into(),
+                [0, 1, 0].into(),
+                [0, 1, 1].into(),
+                [1, 0, 0].into(),
+                [1, 0, 1].into(),
+                [1, 1, 0].into(),
+                [1, 1, 1].into(),
+            ),
+        );
     }
 }

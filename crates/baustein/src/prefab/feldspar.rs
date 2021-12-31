@@ -61,12 +61,3 @@ impl MutChunk for PaletteIdChunk {
         self[ChunkShape::linearize(offset.into()) as usize] = value;
     }
 }
-
-impl IterableSpace for PaletteIdChunk {
-    fn visit_indices<F: FnMut(Index)>(&self, mut f: F) {
-        (0..ChunkShape::SIZE)
-            .map(|i| <ChunkShape as ConstShape<3>>::delinearize(i))
-            .map(|index| index.into())
-            .map(f);
-    }
-}
