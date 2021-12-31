@@ -40,6 +40,12 @@ impl From<IVec3> for WorldIndex {
     }
 }
 
+impl From<Vec3> for WorldIndex {
+    fn from(coords: Vec3) -> Self {
+        [coords.x as i32, coords.y as i32, coords.z as i32].into()
+    }
+}
+
 impl Into<[i32; 3]> for WorldIndex {
     fn into(self) -> [i32; 3] {
         self.0.into()
@@ -193,6 +199,14 @@ impl<T: Copy, E: Space, F> Space for MapIndex<E, F>
 pub trait MutChunk {
     type Voxel: Copy;
     fn set(&mut self, offset: Index, value: Self::Voxel);
+}
+
+// TODO: fold into Space.
+// The folding will need some extra logic to align with underlyning chunks
+pub trait IterableSpace {
+    // Can't be arsed to code an iterator.
+    // Waiting for generators, and maybe monads.
+    fn visit_indices<F: FnMut(Index)>(&self, f: F);
 }
 
 // TODO: a Chunk trait should include the shape.

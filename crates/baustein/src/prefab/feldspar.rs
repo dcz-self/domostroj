@@ -3,7 +3,9 @@
 use feldspar_map::{palette::PaletteId8, sdf::Sd8};
 use feldspar_map::chunk::{ Chunk, ChunkShape, SdfChunk, PaletteIdChunk };
 use ndshape::ConstShape;
-use crate::traits::{ Index, MutChunk, Space };
+
+use crate::indices::to_i32_arr;
+use crate::traits::{ Index, IterableSpace, MutChunk, Space };
 
 
 type Voxel = (Sd8, PaletteId8);
@@ -58,5 +60,14 @@ impl MutChunk for PaletteIdChunk {
     
     fn set(&mut self, offset: Index, value: Self::Voxel) {
         self[ChunkShape::linearize(offset.into()) as usize] = value;
+    }
+}
+
+impl IterableSpace for PaletteIdChunk {
+    fn visit_indices<F: FnMut(Index)>(&self, mut f: F) {
+        (0..ChunkShape::SIZE)
+            .map(|i| <ChunkShape as ConstShape<3>>::delinearize(i))
+            .map(|index| index.into())
+            .map(f);
     }
 }

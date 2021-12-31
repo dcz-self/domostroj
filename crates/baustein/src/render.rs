@@ -16,8 +16,8 @@ use std::fmt;
 
 use crate::indices::to_i32_arr;
 use crate::prefab::World;
-use crate::traits::{ChunkIndex, Space};
-use crate::world::View;
+use crate::traits::{ChunkIndex, IterableSpace, Space};
+use crate::world::{ Cow, View };
 
 
 #[derive(Clone, Copy, PartialEq)]
@@ -120,7 +120,7 @@ pub fn generate_meshes(
     }
 }
 
-/// A space which is affected by the Transformation component before meshing.
+/// A space which is affected by the Transform component before meshing.
 pub struct TransformMesh;
 
 pub fn generate_transformeshes(
@@ -128,7 +128,7 @@ pub fn generate_transformeshes(
     palette: Res<SdfVoxelPalette>,
     //cutoff_height: Res<MeshCutoff>,
     mesh_material: Res<MeshMaterial>,
-    ts_spaces: Query<&PaletteIdChunk>,
+    ts_spaces: Query<(&PaletteIdChunk, &Transform)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut tf_meshes: Query<Entity, With<TransformMesh>>,
 ) {
@@ -136,13 +136,25 @@ pub fn generate_transformeshes(
     for cm in tf_meshes.iter() {
         commands.entity(cm).despawn()
     }
-    // And create the occupied ones again.
-    // Wasteful, I know. I'm testing!
-    for space in ts_spaces.iter() {
-        let wrapped = space.map(|v| PaletteVoxel(v));
+
+    for (space, transform) in ts_spaces.iter() {
+        let mut world = World::default();
+        let mut overlay = Cow::new(&world);
+        // This is kind of lousy, may have holes inside.
+        // It would have been better to perform the inverse transformation,
+        // but the API would have to expose source's occupancy.
+        space.visit_indices(|index| {
+            let voxel = space.get(index);
+            let index = transform.mul_vec3(index.into());
+            overlay.set(index.into(), voxel)
+        });
+        let changes = overlay.into_changes();
+        changes.apply(&mut world);
+        let wrapped = world.map(|v| PaletteVoxel(v));
+        // Screw accuracy. Alien chunks can only be close to the middle.
         let view = View::<_, ndshape::ConstShape3u32<18, 18, 18>>::new(
             &wrapped,
-            [-1, -1, -1].into(),
+            [-9, -9, -9].into(),
         );
         let quads = generate_greedy_buffer(view.clone());
 
@@ -156,8 +168,6 @@ pub fn generate_transformeshes(
                         mesh_material.0.clone(),
                         &mut meshes,
                     )
-                )
-                .insert(Transform::default()
                 )
                 .insert(TransformMesh)
                 ;
