@@ -121,11 +121,21 @@ impl Plugin for EditorPlugin {
                 SystemSet::on_update(EditorState::Editing).with_system(save_map_to_db.system()),
             )
             // Generator
-            .insert_resource(generate::test_world())
+            //.insert_resource(generate::test_world())
             .add_plugin(baustein::render::Plugin)
             .add_system_set(
                 SystemSet::on_update(EditorState::Editing)
-                    .with_system(baustein::render::generate_meshes.system())
+                    //.with_system(baustein::render::generate_meshes.system())
+                    .with_system(baustein::render::generate_transformeshes.system())
+            )
+            // Spinny alien chunk test
+            .add_system_set(
+                SystemSet::on_enter(EditorState::Editing)
+                    .with_system(generate::create_test_spinner.system())
+            )
+            .add_system_set(
+                SystemSet::on_update(EditorState::Editing)
+                    .with_system(generate::spin_spinners.system())
             )
             ;
     }

@@ -2,12 +2,86 @@
  * At some point you will want to build your own based on those. */
 mod feldspar;
 
-use feldspar_map::{palette::PaletteId8, sdf::Sd8};
-use feldspar_map::chunk::PaletteIdChunk;
+use block_mesh::{ MergeVoxel, Voxel };
+use feldspar_map::chunk::ChunkShape;
+use feldspar_map::palette::PaletteId8;
 use std::collections::HashMap;
-use crate::traits::{ ChunkIndex, Space, WorldIndex };
-use crate::traits::Index;
+use std::fmt;
+
+use crate::traits::{ ChunkIndex, Index, IterableSpace, MutChunk, Space, WorldIndex };
 use crate::world::Cow;
+
+// traits
+use ndshape::ConstShape;
+
+
+/// The voxel that maps to a palette entry.
+#[derive(Clone, Copy, PartialEq, Default)]
+pub struct PaletteVoxel(pub PaletteId8);
+
+impl PaletteVoxel {
+    const EMPTY: PaletteVoxel = PaletteVoxel(0);
+}
+
+impl fmt::Debug for PaletteVoxel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        self.0.fmt(f)
+    }
+}
+
+impl Voxel for PaletteVoxel {
+    fn is_empty(&self) -> bool {
+        self.0 == 0
+    }
+    fn is_opaque(&self) -> bool {
+        self.0 != 0
+    }
+}
+
+impl MergeVoxel for PaletteVoxel {
+    type MergeValue = u8;
+    fn merge_value(&self) -> Self::MergeValue {
+        self.0
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct PaletteIdChunk([PaletteVoxel; 4096]);
+
+impl PaletteIdChunk {
+    const EMPTY: PaletteIdChunk = PaletteIdChunk([PaletteVoxel::EMPTY; 4096]);
+}
+
+impl Default for PaletteIdChunk {
+    fn default() -> Self {
+        Self([PaletteVoxel::EMPTY; 4096])
+    }
+}
+
+impl Space for PaletteIdChunk {
+    type Voxel = PaletteVoxel;
+
+    fn get(&self, offset: Index) -> Self::Voxel {
+        self.0[ChunkShape::linearize(offset.into()) as usize]
+    }
+}
+
+impl MutChunk for PaletteIdChunk {
+    type Voxel = PaletteVoxel;
+    
+    fn set(&mut self, offset: Index, value: Self::Voxel) {
+        self.0[ChunkShape::linearize(offset.into()) as usize] = value;
+    }
+}
+
+impl IterableSpace for PaletteIdChunk {
+    fn visit_indices<F: FnMut(Index)>(&self, mut f: F) {
+        (0..ChunkShape::SIZE)
+            .map(|i| <ChunkShape as ConstShape<3>>::delinearize(i))
+            .map(|index| index.into())
+            .map(f);
+    }
+}
 
 
 /// A really terrible, simple world type
@@ -28,11 +102,11 @@ fn trunc(v: i32, thr: i32) -> i32 {
 
 impl World {
     pub fn get_chunk(&self, offset: ChunkIndex) -> PaletteIdChunk {
-        *self.chunks.get(&offset).clone().unwrap_or(&[0; 4096])
+        *self.chunks.get(&offset).clone().unwrap_or(&PaletteIdChunk::EMPTY)
     }
     
     pub fn get_chunk_ref(&self, offset: ChunkIndex) -> &PaletteIdChunk {
-        self.chunks.get(&offset).clone().unwrap_or(&[0; 4096])
+        self.chunks.get(&offset).clone().unwrap_or(&PaletteIdChunk::EMPTY)
     }
 
     pub fn iter_chunks(&self) -> impl Iterator<Item=(ChunkIndex, &PaletteIdChunk)> {
@@ -49,7 +123,7 @@ impl World {
 }
 
 impl Space for World {
-    type Voxel = PaletteId8;
+    type Voxel = PaletteVoxel;
     fn get(&self, offset: WorldIndex) -> Self::Voxel {
         let ci = ChunkIndex::new_encompassing(offset);
         match self.chunks.get(&ci) {

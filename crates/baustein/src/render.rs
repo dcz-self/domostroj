@@ -8,42 +8,15 @@ use feldspar::bb::mesh::PosNormMesh;
 use feldspar::prelude::{ChunkMeshes, MeshMaterial, SdfVoxelPalette, VoxelType, VoxelTypeInfo, VoxelMaterial};
 use feldspar::renderer::create_voxel_mesh_bundle;
 use feldspar_core::glam::IVec3;
-use feldspar_map::chunk::PaletteIdChunk;
 use feldspar_map::palette::PaletteId8;
 use feldspar_map::units::VoxelUnits;
 use ndshape::ConstShape;
-use std::fmt;
 
 use crate::indices::to_i32_arr;
-use crate::prefab::World;
+use crate::prefab::{ PaletteIdChunk, PaletteVoxel, World };
 use crate::traits::{ChunkIndex, IterableSpace, Space};
 use crate::world::{ Cow, View };
 
-
-#[derive(Clone, Copy, PartialEq)]
-struct PaletteVoxel(PaletteId8);
-
-impl fmt::Debug for PaletteVoxel {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        self.0.fmt(f)
-    }
-}
-
-impl Voxel for PaletteVoxel {
-    fn is_empty(&self) -> bool {
-        self.0 == 0
-    }
-    fn is_opaque(&self) -> bool {
-        self.0 != 0
-    }
-}
-
-impl MergeVoxel for PaletteVoxel {
-    type MergeValue = u8;
-    fn merge_value(&self) -> Self::MergeValue {
-        self.0
-    }
-}
 
 type ViewShape = ConstShape3u32::<18, 18, 18>;
 
@@ -137,6 +110,8 @@ pub fn generate_transformeshes(
         commands.entity(cm).despawn()
     }
 
+
+
     for (space, transform) in ts_spaces.iter() {
         let mut world = World::default();
         let mut overlay = Cow::new(&world);
@@ -150,10 +125,9 @@ pub fn generate_transformeshes(
         });
         let changes = overlay.into_changes();
         changes.apply(&mut world);
-        let wrapped = world.map(|v| PaletteVoxel(v));
         // Screw accuracy. Alien chunks can only be close to the middle.
         let view = View::<_, ndshape::ConstShape3u32<18, 18, 18>>::new(
-            &wrapped,
+            &world,
             [-9, -9, -9].into(),
         );
         let quads = generate_greedy_buffer(view.clone());
@@ -204,11 +178,9 @@ fn generate_mesh_for_chunk(
     palette: &SdfVoxelPalette,
     index: ChunkIndex,
 ) -> Option<(PosNormMesh, Vec<[u8; 4]>)> {
-    let wrapped = world.map(|v| PaletteVoxel(v));
-    
     let view_offset = index.get_world_offset();
     let view = View::<_, ndshape::ConstShape3u32<18, 18, 18>>::new(
-        &wrapped,
+        &world,
         view_offset,
     );
 

@@ -4,7 +4,6 @@ use feldspar_map::{palette::PaletteId8, sdf::Sd8};
 use feldspar_map::chunk::{ Chunk, ChunkShape, SdfChunk, PaletteIdChunk };
 use ndshape::ConstShape;
 
-use crate::indices::to_i32_arr;
 use crate::traits::{ Index, IterableSpace, MutChunk, Space };
 
 

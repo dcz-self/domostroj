@@ -1,13 +1,13 @@
 /*! Voxel storage */
 use feldspar_core::glam::IVec3;
 
-use feldspar_map::chunk::{ Chunk, ChunkShape, SdfChunk, PaletteIdChunk };
+use feldspar_map::chunk::{ Chunk, ChunkShape, SdfChunk };
 use feldspar_map::palette::PaletteId8;
 use feldspar_map::units::{ ChunkUnits, VoxelUnits };
 use ndshape::ConstShape;
 use std::collections::HashMap;
 use crate::indices::to_i32_arr;
-use crate::prefab::World;
+use crate::prefab::{ PaletteIdChunk, PaletteVoxel, World };
 use crate::traits::{Space, WorldIndex, MutChunk, Index, ChunkIndex};
 
 
@@ -26,13 +26,13 @@ impl<'a> Cow<'a> {
         }
     }
 
-    fn get(&self, offset: Index) -> PaletteId8 {
+    fn get(&self, offset: Index) -> PaletteVoxel {
         let ci = ChunkIndex::new_encompassing(offset);
         self.get_chunk(ci).get(Index::new(ci.get_internal_offset(offset)))
     }
 
     // Not sure if this is the right place to do this, but let's try.
-    pub fn set(&mut self, offset: Index, value: PaletteId8) {
+    pub fn set(&mut self, offset: Index, value: PaletteVoxel) {
         let ci = ChunkIndex::new_encompassing(offset);
         let i = Index::new(ci.get_internal_offset(offset));
         let chunk = self.get_chunk_mut(ci);

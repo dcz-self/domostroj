@@ -15,8 +15,12 @@ use bevy::{
     window::{CreateWindow, WindowDescriptor, WindowId},
 };
 
-use baustein::prefab::World;
+use baustein::prefab::{ PaletteIdChunk, PaletteVoxel, World };
 use baustein::world::Cow;
+
+// used traits
+use baustein::traits::MutChunk;
+
 
 /// This creates a second window with a different camera
 pub struct CameraPlugin;
@@ -225,7 +229,7 @@ pub fn test_world() -> World {
     for x in -2..5 {
         for y in -2..5 {
             for z in -2..5 {
-                cow.set([x, y, z].into(), 1)
+                cow.set([x, y, z].into(), PaletteVoxel(1));
             }
         }
     }
@@ -233,4 +237,36 @@ pub fn test_world() -> World {
     let mut world = world;
     changes.apply(&mut world);
     world
+}
+
+fn test_spinner() -> PaletteIdChunk {
+    let mut chunk: PaletteIdChunk = Default::default();
+    for x in 0..5 {
+        for y in 0..2 {
+            for z in 0..3 {
+                chunk.set([x + 9, y + 9, z + 9].into(), PaletteVoxel(1));
+            }
+        }
+    }
+    chunk
+}
+
+pub fn create_test_spinner(
+    mut commands: Commands,
+) {
+    commands.spawn()
+        .insert(test_spinner())
+        .insert(Transform::default());
+}
+
+
+pub fn spin_spinners(
+    mut ts_spaces: Query<&mut Transform, With<PaletteIdChunk>>,
+) {
+    let rot_step = Transform::from_rotation(
+        Quat::from_axis_angle([0.0, 1.0, 0.0].into(), 0.1)
+    );
+    for mut transform in ts_spaces.iter_mut() {
+        *transform = transform.mul_transform(rot_step);
+    }
 }
