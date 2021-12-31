@@ -35,7 +35,7 @@ impl<'a> Cow<'a> {
     pub fn set(&mut self, offset: Index, value: PaletteId8) {
         let ci = ChunkIndex::new_encompassing(offset);
         let i = Index::new(ci.get_internal_offset(offset));
-        let mut chunk = self.get_chunk_mut(ci);
+        let chunk = self.get_chunk_mut(ci);
         chunk.set(i, value);
     }
 

@@ -195,6 +195,8 @@ pub trait MutChunk {
     fn set(&mut self, offset: Index, value: Self::Voxel);
 }
 
+// TODO: a Chunk trait should include the shape.
+// a World trait should include the grid
 
 #[cfg(test)]
 mod test {

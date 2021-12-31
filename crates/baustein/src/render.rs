@@ -8,8 +8,10 @@ use feldspar::bb::mesh::PosNormMesh;
 use feldspar::prelude::{ChunkMeshes, MeshMaterial, SdfVoxelPalette, VoxelType, VoxelTypeInfo, VoxelMaterial};
 use feldspar::renderer::create_voxel_mesh_bundle;
 use feldspar_core::glam::IVec3;
+use feldspar_map::chunk::PaletteIdChunk;
 use feldspar_map::palette::PaletteId8;
 use feldspar_map::units::VoxelUnits;
+use ndshape::ConstShape;
 use std::fmt;
 
 use crate::indices::to_i32_arr;
@@ -118,6 +120,74 @@ pub fn generate_meshes(
     }
 }
 
+/// A space which is affected by the Transformation component before meshing.
+pub struct TransformMesh;
+
+pub fn generate_transformeshes(
+    mut commands: Commands,
+    palette: Res<SdfVoxelPalette>,
+    //cutoff_height: Res<MeshCutoff>,
+    mesh_material: Res<MeshMaterial>,
+    ts_spaces: Query<&PaletteIdChunk>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut tf_meshes: Query<Entity, With<TransformMesh>>,
+) {
+    // Get rid of all meshes
+    for cm in tf_meshes.iter() {
+        commands.entity(cm).despawn()
+    }
+    // And create the occupied ones again.
+    // Wasteful, I know. I'm testing!
+    for space in ts_spaces.iter() {
+        let wrapped = space.map(|v| PaletteVoxel(v));
+        let view = View::<_, ndshape::ConstShape3u32<18, 18, 18>>::new(
+            &wrapped,
+            [-1, -1, -1].into(),
+        );
+        let quads = generate_greedy_buffer(view.clone());
+
+        let mesh = mesh_from_quads(quads, &palette, view);
+        if let Some((mesh, materials)) = mesh {
+            commands
+                .spawn_bundle(
+                    create_voxel_mesh_bundle(
+                        mesh,
+                        materials,
+                        mesh_material.0.clone(),
+                        &mut meshes,
+                    )
+                )
+                .insert(Transform::default()
+                )
+                .insert(TransformMesh)
+                ;
+        }
+    }
+}
+
+fn generate_greedy_buffer<V, S, Shape>(
+    view: View<S, Shape>,
+) -> GreedyQuadsBuffer
+    where
+    V: MergeVoxel,
+    S: Space<Voxel=V>,
+    Shape: ConstShape<3, Coord=u32>
+{
+    let samples = view.into_vec();
+    let faces = RIGHT_HANDED_Y_UP_CONFIG.faces;
+
+    let mut buffer = GreedyQuadsBuffer::new(samples.len());
+
+    greedy_quads(
+        &samples,
+        &ViewShape {},
+        [0, 0, 0],
+        [Shape::ARRAY[0] - 1, Shape::ARRAY[1] - 1, Shape::ARRAY[2] - 1],
+        &faces,
+        &mut buffer,
+    );
+    buffer
+}
 
 fn generate_mesh_for_chunk(
     world: &World,
@@ -145,7 +215,14 @@ fn generate_mesh_for_chunk(
         &faces,
         &mut buffer,
     );
+    mesh_from_quads(buffer, palette, view)
+}
 
+fn mesh_from_quads<S: Space<Voxel=PaletteVoxel>>(
+    buffer: GreedyQuadsBuffer,
+    palette: &SdfVoxelPalette,
+    view: S,
+) -> Option<(PosNormMesh, Vec<[u8; 4]>)> {
     if buffer.quads.num_quads() == 0 {
         None
     } else {
@@ -156,6 +233,7 @@ fn generate_mesh_for_chunk(
         let mut positions = Vec::with_capacity(num_vertices);
         let mut normals = Vec::with_capacity(num_vertices);
         let mut materials = Vec::with_capacity(num_vertices);
+        let faces = RIGHT_HANDED_Y_UP_CONFIG.faces;
         for (group, face) in buffer.quads.groups.into_iter().zip(faces.into_iter()) {
             for quad in group.into_iter() {
                 indices.extend_from_slice(&face.quad_mesh_indices(positions.len() as u32));
