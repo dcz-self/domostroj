@@ -13,8 +13,9 @@ use feldspar_map::units::VoxelUnits;
 use std::fmt;
 
 use crate::indices::to_i32_arr;
+use crate::prefab::World;
 use crate::traits::{ChunkIndex, Space};
-use crate::world::{World, View};
+use crate::world::View;
 
 
 #[derive(Clone, Copy, PartialEq)]

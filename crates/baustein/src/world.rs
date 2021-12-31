@@ -1,117 +1,18 @@
 /*! Voxel storage */
 use feldspar_core::glam::IVec3;
 
-use feldspar_map::{palette::PaletteId8, sdf::Sd8};
 use feldspar_map::chunk::{ Chunk, ChunkShape, SdfChunk, PaletteIdChunk };
+use feldspar_map::palette::PaletteId8;
 use feldspar_map::units::{ ChunkUnits, VoxelUnits };
 use ndshape::ConstShape;
 use std::collections::HashMap;
 use crate::indices::to_i32_arr;
+use crate::prefab::World;
 use crate::traits::{Space, WorldIndex, MutChunk, Index, ChunkIndex};
 
 
-type Voxel = (Sd8, PaletteId8);
-
-impl Space for Chunk {
-    type Voxel = Voxel;
-
-    fn get(&self, offset: Index) -> Self::Voxel {
-        (
-            self.sdf.get(offset),
-            self.palette_ids.get(offset),
-        )
-    }
-}
-
-impl MutChunk for Chunk {
-    type Voxel = Voxel;
-    
-    fn set(&mut self, offset: Index, value: Self::Voxel) {
-        self.sdf.set(offset, value.0);
-        self.palette_ids.set(offset, value.1);
-    }
-}
-
-impl Space for SdfChunk {
-    type Voxel = Sd8;
-
-    fn get(&self, offset: Index) -> Self::Voxel {
-        self[ChunkShape::linearize(offset.into()) as usize]
-    }
-}
-
-impl MutChunk for SdfChunk {
-    type Voxel = Sd8;
-    
-    fn set(&mut self, offset: Index, value: Self::Voxel) {
-        self[ChunkShape::linearize(offset.into()) as usize] = value;
-    }
-}
-
-impl Space for PaletteIdChunk {
-    type Voxel = PaletteId8;
-
-    fn get(&self, offset: Index) -> Self::Voxel {
-        self[ChunkShape::linearize(offset.into()) as usize]
-    }
-}
-
-
-impl MutChunk for PaletteIdChunk {
-    type Voxel = PaletteId8;
-    
-    fn set(&mut self, offset: Index, value: Self::Voxel) {
-        self[ChunkShape::linearize(offset.into()) as usize] = value;
-    }
-}
-
-/// A really terrible, simple world type
-/// What do I want from the world?
-/// Definitely not direct mutability. Use the Cow.
-#[derive(Default)]
-pub struct World {
-    chunks: HashMap<ChunkIndex, PaletteIdChunk>,
-}
-
-/// This is really slow, we already know chunk coords are pow2.
-fn trunc(v: i32, thr: i32) -> i32 {
-    let r = v % thr;
-    v - r
-}
-
-impl World {
-    fn get_chunk(&self, offset: ChunkIndex) -> PaletteIdChunk {
-        *self.chunks.get(&offset).clone().unwrap_or(&[0; 4096])
-    }
-    
-    fn get_chunk_ref(&self, offset: ChunkIndex) -> &PaletteIdChunk {
-        self.chunks.get(&offset).clone().unwrap_or(&[0; 4096])
-    }
-
-    pub fn iter_chunks(&self) -> impl Iterator<Item=(ChunkIndex, &PaletteIdChunk)> {
-        self.chunks.iter().map(|(offset, chunk)| (offset.clone(), chunk))
-    }
-
-    pub fn iter_chunk_indices<'a>(&'a self) -> impl Iterator<Item=ChunkIndex> + 'a {
-        self.chunks.keys().cloned()
-    }
-
-    fn cow<'a>(&'a self) -> Cow<'a> {
-        Cow::new(&self)
-    }
-}
-
-impl Space for World {
-    type Voxel = PaletteId8;
-    fn get(&self, offset: WorldIndex) -> Self::Voxel {
-        let ci = ChunkIndex::new_encompassing(offset);
-        match self.chunks.get(&ci) {
-            Some(chunk) => chunk.get(Index::new(ci.get_internal_offset(offset))),
-            None => Default::default(),
-        }
-    }
-}
-
+/// A naive copy-on-write overlay over a World.
+/// Its changes can be eventually applied to the underlying World.
 pub struct Cow<'a> {
     base: &'a World,
     overlaid: HashMap<ChunkIndex, PaletteIdChunk>,

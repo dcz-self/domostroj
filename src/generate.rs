@@ -15,7 +15,8 @@ use bevy::{
     window::{CreateWindow, WindowDescriptor, WindowId},
 };
 
-use baustein::world::{ World, Cow };
+use baustein::prefab::World;
+use baustein::world::Cow;
 
 /// This creates a second window with a different camera
 pub struct CameraPlugin;
