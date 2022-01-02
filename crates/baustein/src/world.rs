@@ -207,7 +207,11 @@ impl<V: Default, Shape: ConstShape<3, Coord=u32>> FlatPaddedCuboid<V, Shape> {
     }
 }
 
-impl<V: Default + Copy, Shape: ConstShape<3, Coord=u32>> Space for FlatPaddedCuboid<V, Shape> {
+impl<V, Shape> Space for FlatPaddedCuboid<V, Shape>
+    where
+    V: Default + Copy,
+    Shape: ConstShape<3, Coord=u32>,
+{
     type Voxel = V;
     fn get(&self, offset: Index) -> Self::Voxel {
         if self.contains(offset) {
