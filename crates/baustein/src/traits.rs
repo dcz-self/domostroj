@@ -106,6 +106,14 @@ impl<T: Copy, U: Copy, E, F> Space for Zip<E, F>
     }
 }
 
+// FIXME: this totally ignores the second space. Should be okay for now.
+impl<E, F> IterableSpace for Zip<E, F>
+    where E: IterableSpace,
+{
+    fn visit_indices<G: FnMut(Index)>(&self, f: G) {
+        self.left.visit_indices(f)
+    }
+}
 
 pub trait MutChunk {
     type Voxel: Copy;
@@ -129,6 +137,26 @@ impl<T> IterableSpace for &T
         (*self).visit_indices(f)
     }
 }*/
+
+/* TODO: this is overkill. Yes, Zip is broken without it.
+/// For structures which can cheaply tell the corners
+/// between which all their voxels lie
+pub trait Extent {
+    /// The corner with lowest indices in each dimension
+    fn get_offset(&self) -> Index;
+    /// The corner with highest indices in each dimension, plus [1,1,1]
+    fn get_beyond_opposite_corner(&self) -> Index;
+}
+
+impl IterableSpace for Extent {
+    fn visit_indices<F: FnMut(Index)>(&self, f: F) {
+        let start = self.get_offset();
+        let end = self.get_beyond_opposite_corner();
+        for 
+    }
+}
+*/
+
 // TODO: a Chunk trait should include the shape.
 // a World trait should include the grid
 
