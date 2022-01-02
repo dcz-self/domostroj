@@ -39,6 +39,10 @@ impl WorldIndex {
             *self + VoxelUnits([0, 0, -1].into()),
         ])
     }
+
+    pub fn iter_neighbours6(&self) -> impl Iterator<Item=Self> {
+        self.neighbours6().0.into_iter()
+    }
 }
 
 impl ops::Index<usize> for WorldIndex {
