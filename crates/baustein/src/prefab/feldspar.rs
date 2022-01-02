@@ -4,7 +4,8 @@ use feldspar_map::{palette::PaletteId8, sdf::Sd8};
 use feldspar_map::chunk::{ Chunk, ChunkShape, SdfChunk, PaletteIdChunk };
 use ndshape::ConstShape;
 
-use crate::traits::{ Index, IterableSpace, MutChunk, Space };
+use crate::indices::Index;
+use crate::traits::{ MutChunk, Space };
 
 
 type Voxel = (Sd8, PaletteId8);

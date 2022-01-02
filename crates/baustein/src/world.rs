@@ -1,11 +1,13 @@
 /*! Voxel storage */
-use feldspar_map::units::{ ChunkUnits, VoxelUnits };
+use feldspar_map::units::VoxelUnits;
 use ndshape::ConstShape;
 use std::collections::HashMap;
-use crate::indices::to_i32_arr;
+use crate::indices::{to_i32_arr, ChunkIndex, Index};
 use crate::prefab::{ PaletteIdChunk, PaletteVoxel, World };
-use crate::traits::{Space, MutChunk, Index, IterableSpace, ChunkIndex};
+use crate::traits::{Space, IterableSpace};
 
+// Used traits
+use crate::traits::MutChunk;
 
 /// A naive copy-on-write overlay over a World.
 /// Its changes can be eventually applied to the underlying World.

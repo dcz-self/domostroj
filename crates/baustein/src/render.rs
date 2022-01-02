@@ -3,18 +3,15 @@
 use bevy::app;
 use bevy::prelude::*;
 use block_mesh::ndshape::ConstShape3u32;
-use block_mesh::{greedy_quads, GreedyQuadsBuffer, MergeVoxel, Voxel, RIGHT_HANDED_Y_UP_CONFIG};
+use block_mesh::{greedy_quads, GreedyQuadsBuffer, MergeVoxel, RIGHT_HANDED_Y_UP_CONFIG};
 use feldspar::bb::mesh::PosNormMesh;
-use feldspar::prelude::{ChunkMeshes, MeshMaterial, SdfVoxelPalette, VoxelType, VoxelTypeInfo, VoxelMaterial};
+use feldspar::prelude::{MeshMaterial, SdfVoxelPalette, VoxelType, VoxelTypeInfo, VoxelMaterial};
 use feldspar::renderer::create_voxel_mesh_bundle;
-use feldspar_core::glam::IVec3;
-use feldspar_map::palette::PaletteId8;
-use feldspar_map::units::VoxelUnits;
 use ndshape::ConstShape;
 
-use crate::indices::to_i32_arr;
+use crate::indices::{to_i32_arr, ChunkIndex};
 use crate::prefab::{ PaletteIdChunk, PaletteVoxel, World };
-use crate::traits::{ChunkIndex, IterableSpace, Space};
+use crate::traits::{IterableSpace, Space};
 use crate::world::{ Cow, View };
 
 
@@ -62,7 +59,7 @@ pub fn generate_meshes(
     //cutoff_height: Res<MeshCutoff>,
     mesh_material: Res<MeshMaterial>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut chunk_meshes: Query<Entity, With<ChunkMesh>>,
+    chunk_meshes: Query<Entity, With<ChunkMesh>>,
 ) {
     // Get rid of all meshes
     for cm in chunk_meshes.iter() {
@@ -103,7 +100,7 @@ pub fn generate_transformeshes(
     mesh_material: Res<MeshMaterial>,
     ts_spaces: Query<(&PaletteIdChunk, &Transform)>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut tf_meshes: Query<Entity, With<TransformMesh>>,
+    tf_meshes: Query<Entity, With<TransformMesh>>,
 ) {
     // Get rid of all meshes
     for cm in tf_meshes.iter() {

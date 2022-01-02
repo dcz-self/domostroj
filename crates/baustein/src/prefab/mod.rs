@@ -8,8 +8,8 @@ use ndshape::ConstPow2Shape3u32;
 use std::collections::HashMap;
 use std::fmt;
 
-use crate::indices::{ to_i32_arr, to_u32_arr};
-use crate::traits::{ ChunkIndex, Index, IterableSpace, MutChunk, Space, WorldIndex };
+use crate::indices::{ to_i32_arr, to_u32_arr, ChunkIndex, Index, WorldIndex };
+use crate::traits::{ IterableSpace, MutChunk, Space };
 use crate::world::Cow;
 
 // traits
@@ -89,7 +89,7 @@ impl IterableSpace for PaletteIdChunk {
 
 
 impl<T> IterableSpace for T where T: ConstShape<3, Coord=u32> {
-    fn visit_indices<F: FnMut(Index)>(&self, mut f: F) {
+    fn visit_indices<F: FnMut(Index)>(&self, f: F) {
         (0..T::SIZE)
             .map(|i| T::delinearize(i))
             .map(|index| to_i32_arr(index).into())
