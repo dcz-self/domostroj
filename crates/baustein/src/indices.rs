@@ -27,6 +27,18 @@ impl WorldIndex {
     pub fn new(offset: VoxelUnits<IVec3>) -> Self {
         Self(offset.0)
     }
+
+    /// Returns the 6 neighbouring indices sharing a face.
+    pub fn neighbours6(&self) -> Neighbours6<Self> {
+        Neighbours6([
+            *self + VoxelUnits([1, 0, 0].into()),
+            *self + VoxelUnits([-1, 0, 0].into()),
+            *self + VoxelUnits([0, 1, 0].into()),
+            *self + VoxelUnits([0, -1, 0].into()),
+            *self + VoxelUnits([0, 0, 1].into()),
+            *self + VoxelUnits([0, 0, -1].into()),
+        ])
+    }
 }
 
 impl ops::Index<usize> for WorldIndex {
@@ -123,6 +135,32 @@ impl ChunkIndex {
     /// Offset relative to the beginning of the chunk.
     pub fn get_internal_offset(&self, index: WorldIndex) -> VoxelUnits<IVec3> {
         VoxelUnits(index.0 - Self::new_encompassing(index).0)
+    }
+}
+
+
+/// Ordered collection of properties of neighbours.
+/// x+ x- y+ y- z+ z-
+pub struct Neighbours6<T: Copy>(pub [T; 6]);
+
+impl<T: Copy> Neighbours6<T> {
+    fn xp(&self) -> T {
+        self.0[0]
+    }
+    fn xm(&self) -> T {
+        self.0[1]
+    }
+    fn yp(&self) -> T {
+        self.0[2]
+    }
+    fn ym(&self) -> T {
+        self.0[3]
+    }
+    fn zp(&self) -> T {
+        self.0[4]
+    }
+    fn zm(&self) -> T {
+        self.0[5]
     }
 }
 
