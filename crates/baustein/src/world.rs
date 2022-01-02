@@ -222,6 +222,20 @@ impl<V, Shape> Space for FlatPaddedCuboid<V, Shape>
     }
 }
 
+impl<V, Shape> IterableSpace for FlatPaddedCuboid<V, Shape>
+    where
+    V: Copy,
+    Shape: ConstShape<3, Coord=u32>,
+{
+    fn visit_indices<F: FnMut(Index)>(&self, mut f: F) {
+        for i in 0..Shape::SIZE {
+            let idx = <Shape as ConstShape<3>>::delinearize(i);
+            let idx: Index = to_i32_arr(idx).into();
+            f(idx + VoxelUnits(self.offset.0.into()))
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
