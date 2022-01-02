@@ -89,6 +89,15 @@ impl<T: Copy, E: Space, F> Space for MapIndex<E, F>
     }
 }
 
+impl<E, F> IterableSpace for MapIndex<E, F>
+    where E: IterableSpace,
+{
+    fn visit_indices<G: FnMut(Index)>(&self, f: G) {
+        self.extent.visit_indices(f)
+    }
+}
+
+
 pub struct Zip<E, F> {
     left: E,
     right: F,
