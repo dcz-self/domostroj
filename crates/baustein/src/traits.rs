@@ -26,6 +26,15 @@ pub trait Space {
             f,
         }
     }
+
+    fn zip<'a, 'b, T: Copy, S>(&'a self, other: &'b S) -> Zip<&'a Self, &'b S>
+        where S: Space<Voxel=T>
+    {
+        Zip {
+            left: self,
+            right: other,
+        }
+    }
 }
 
 impl<V, T> Space for &T
@@ -77,6 +86,23 @@ impl<T: Copy, E: Space, F> Space for MapIndex<E, F>
 
     fn get(&self, offset: Index) -> Self::Voxel {
         (self.f)(offset, self.extent.get(offset))
+    }
+}
+
+pub struct Zip<E, F> {
+    left: E,
+    right: F,
+}
+
+impl<T: Copy, U: Copy, E, F> Space for Zip<E, F>
+    where
+    E: Space<Voxel=T>,
+    F: Space<Voxel=U>,
+{
+    type Voxel = (T, U);
+
+    fn get(&self, offset: Index) -> Self::Voxel {
+        (self.left.get(offset), self.right.get(offset))
     }
 }
 
