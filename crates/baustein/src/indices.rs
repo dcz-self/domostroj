@@ -21,7 +21,7 @@ pub(crate) fn to_u32_arr(a: [i32; 3]) -> [u32; 3] {
 /// Delberately not public inside,
 /// to be able to replace it in the future with a chunk+voxel combo
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct WorldIndex(IVec3);
+pub struct WorldIndex(pub IVec3);
 
 impl WorldIndex {
     pub fn new(offset: VoxelUnits<IVec3>) -> Self {
@@ -42,6 +42,18 @@ impl WorldIndex {
 
     pub fn iter_neighbours6(&self) -> impl Iterator<Item=Self> {
         self.neighbours6().0.into_iter()
+    }
+
+    pub fn x(&self) -> i32 {
+        self.0[0]
+    }
+
+    pub fn y(&self) -> i32 {
+        self.0[1]
+    }
+
+    pub fn z(&self) -> i32 {
+        self.0[2]
     }
 }
 

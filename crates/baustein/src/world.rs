@@ -2,7 +2,7 @@
 use feldspar_map::units::VoxelUnits;
 use ndshape::ConstShape;
 use std::collections::HashMap;
-use crate::indices::{to_i32_arr, ChunkIndex, Index};
+use crate::indices::{to_i32_arr, to_u32_arr, ChunkIndex, Index};
 use crate::prefab::{ PaletteIdChunk, PaletteVoxel, World };
 use crate::traits::{Space, IterableSpace};
 
@@ -93,9 +93,9 @@ impl Overlay {
 use std::marker::PhantomData;
 
 pub struct View<'a, S, Shape> {
-    pub world: &'a S,
-    pub offset: Index,
-    pub shape: PhantomData<Shape>,
+    world: &'a S,
+    offset: Index,
+    shape: PhantomData<Shape>,
 }
 
 /// This is redundant, but derive(Clone) complains that the concrete type under S is not Clone.
@@ -145,6 +145,76 @@ impl<'a, S: Space, Shape> Space for View<'a, S, Shape> {
 impl<'a, S: IterableSpace, Shape> IterableSpace for View<'a, S, Shape> {
     fn visit_indices<F: FnMut(Index)>(&self, mut f: F) {
         self.world.visit_indices(|i| f(i - VoxelUnits(self.offset.into())))
+    }
+}
+
+/// Flat 3d array, out-of-bounds gives default voxel.
+/// This should be pretty fast, but not suitable for any large space.
+struct FlatPaddedCuboid<V, Shape: ConstShape<3>> {
+    data: Vec<V>,
+    offset: Index,
+    shape: PhantomData<Shape>,
+}
+
+/* Const expressions not in stable yet
+struct FlatPaddedCuboid<V, const X: usize, const Y: usize, const Z: usize> {
+    data: [V; X*Y*Z],
+}
+*/
+
+struct OutOfBounds;
+
+impl<V: Default, Shape: ConstShape<3, Coord=u32>> FlatPaddedCuboid<V, Shape> {
+    /// Dimensions are determined by the compile-time Shape.
+    /// Offset is the lowest point of this cuboid portion.
+    fn new_from_space<S: Space<Voxel=V>>(space: &S, offset: Index) -> Self {
+        let mut data = Vec::with_capacity(Shape::SIZE as usize);
+        for i in 0..Shape::SIZE {
+            let idx = <Shape as ConstShape<3>>::delinearize(i);
+            let idx: Index = to_i32_arr(idx).into();
+            data[i as usize] = space.get(idx + VoxelUnits(offset.0.into()));
+        }
+        Self {
+            data,
+            offset,
+            shape: Default::default(),
+        }
+    }
+
+    /// Returns the index that's actuallly the corner, e.g. not 1 unit beyond
+    fn opposite_corner(&self) -> Index {
+        self.offset + VoxelUnits(to_i32_arr(Shape::ARRAY).into()) - VoxelUnits([1, 1, 1].into())
+    }
+
+    fn contains(&self, index: Index) -> bool {
+        if index.x() < self.offset.x() || index.y() < self.offset.y() || index.z() < self.offset.z() {
+            return false;
+        }
+        let opposite = self.opposite_corner();
+        if index.x() > opposite.x() || index.y() > opposite.y() || index.z() > opposite.z() {
+            return false;
+        }
+        true
+    }
+
+    fn set(&mut self, index: Index, value: V) -> Result<(), OutOfBounds> {
+        if self.contains(index) {
+            self.data[Shape::linearize(to_u32_arr(index.into())) as usize] = value;
+            Ok(())
+        } else {
+            Err(OutOfBounds)
+        }
+    }
+}
+
+impl<V: Default + Copy, Shape: ConstShape<3, Coord=u32>> Space for FlatPaddedCuboid<V, Shape> {
+    type Voxel = V;
+    fn get(&self, offset: Index) -> Self::Voxel {
+        if self.contains(offset) {
+            self.data[Shape::linearize(to_u32_arr(offset.into())) as usize]
+        } else {
+            Default::default()
+        }
     }
 }
 
