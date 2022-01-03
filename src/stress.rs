@@ -75,7 +75,7 @@ fn get_load_sum(sf: SixForces) -> Force {
 /// Stores force imbalance between neigboring voxels.
 /// Because imbalance is the same (but negative) in each direction,
 /// only 3 neighbors are stored, each in positive axis direction.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct ThreeForces([Force; 3]);
 
 impl ThreeForces {
@@ -99,6 +99,22 @@ fn get_initial_forces<FS, VS>(forces: &FS, voxels: &VS) -> FlatPaddedCuboid<SixF
         .zip(forces)
         .zip(&sf)
         .map_index(|i, v| voxel::distribute_forces(voxels, i, v))
+        .into()
+}
+
+fn process_newton_discrepancy<S>(space: &S)
+    -> FlatPaddedCuboid<ThreeForces>
+where S: Space<Voxel=SixForces> + Extent + IterableSpace
+{
+    // Actually, no padding is needed.
+    // While ThreeForces stores only in 3 directions,
+    // and 3 negative directions out of 6 forces will get lost
+    // (because map_index is free not to iterate over empty voxels),
+    // those are not supposed to be part of the simulation extent and will be clamped to 0.
+    // This presumes that voxels outside of iteration extent are empty.
+    // let space = space.pad([[-1, 0, 0], [0, -1, 0], [0, 0, -1]]);
+    space
+        .map_index(|i, v| voxel::get_newton_discrepancy(space, i, v))
         .into()
 }
 
@@ -135,24 +151,23 @@ where
         .into()
 }
 
-/*
 fn solve<SF, SV, SO>(external_forces: &SF, space: &SV, threshold: f32)
-    -> impl Space<Voxel=Force>
+    -> FlatPaddedCuboid<Force>
 where
-    SF: Space<Voxel=Force>,
-    SV: Space<Voxel=StressVoxel>,
+    SF: Space<Voxel=Force> + Extent + IterableSpace,
+    SV: Space<Voxel=StressVoxel> + Extent + IterableSpace,
 {
     let mut sixforces = get_initial_forces(external_forces, space);
     loop {
-        let balance = process_newton_discrepancy(sixforces);
+        let balance = process_newton_discrepancy(&sixforces);
         // Yield sixforces, balance here for stepped execution.
-        if get_newton_global_loss(balance) < threshold {
-            return sixforces.map(|sf| get_load_sum(sf))
+        if get_newton_global_loss(&balance) < threshold {
+            return sixforces.map(|sf| get_load_sum(sf)).into();
         }
-        sixforces = distribute(space, balance, sixforces);
+        sixforces = distribute(space, &balance, &sixforces);
     }
 }
-*/
+
 /// That which applies voxel-wise.
 mod voxel {
     use baustein::indices::{Index, Neighbours6};
