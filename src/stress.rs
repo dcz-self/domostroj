@@ -75,6 +75,7 @@ fn get_load_sum(sf: SixForces) -> Force {
 /// Stores force imbalance between neigboring voxels.
 /// Because imbalance is the same (but negative) in each direction,
 /// only 3 neighbors are stored, each in positive axis direction.
+#[derive(Clone, Copy)]
 pub struct ThreeForces([Force; 3]);
 
 impl ThreeForces {
@@ -100,6 +101,40 @@ fn get_initial_forces<FS, VS>(forces: &FS, voxels: &VS) -> FlatPaddedCuboid<SixF
         .map_index(|i, v| voxel::distribute_forces(voxels, i, v))
         .into()
 }
+
+/// How far away from perfect match we are (squares).
+/// Maybe it's better to find maximum?
+/// Returns a loss value in the squared, not linear, space.
+fn get_newton_global_loss<S>(space: &S) -> f32
+    where S: Space<Voxel=ThreeForces> + IterableSpace
+{
+    let mut sum = 0.0;
+    space
+        .visit_indices(|i| {
+            sum += space.get(i)
+                .0
+                .iter()
+                .map(|f| f.0 * f.0)
+                .sum::<f32>()
+        });
+    sum
+}
+    
+fn distribute<FS, BS, VS>(space: &VS, balance: &BS, forces: &FS)
+    -> FlatPaddedCuboid<SixForces>
+where
+    FS: Space<Voxel=SixForces> + Extent + IterableSpace,
+    VS: Space<Voxel=StressVoxel> + Extent + IterableSpace,
+    BS: Space<Voxel=ThreeForces> + Extent + IterableSpace,
+{
+    let b = balance.map(|tf| tf.imbalance());
+    space
+        .zip(&b)
+        .zip(forces)
+        .map_index(|i, v| voxel::distribute_forces(space, i, v))
+        .into()
+}
+
 /*
 fn solve<SF, SV, SO>(external_forces: &SF, space: &SV, threshold: f32)
     -> impl Space<Voxel=Force>
