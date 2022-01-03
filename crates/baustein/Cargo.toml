@@ -23,8 +23,8 @@ git = "https://github.com/bonsairobo/feldspar"
 rev = "e09001c1"
 
 [dependencies.ndshape]
-git = "https://github.com/bonsairobo/ndshape-rs"
-rev = "8fd240e"
+git = "https://github.com/dcz-self/ndshape-rs"
+rev = "82e25b6"
 
 
 [patch.'https://github.com/bonsairobo/feldspar']

@@ -206,7 +206,7 @@ dependencies = [
  "feldspar-core",
  "feldspar-map",
  "maplit",
- "ndshape 0.2.0 (git+https://github.com/bonsairobo/ndshape-rs?rev=8fd240e)",
+ "ndshape 0.2.0 (git+https://github.com/dcz-self/ndshape-rs?rev=82e25b6)",
 ]
 
 [[package]]
@@ -1322,7 +1322,7 @@ dependencies = [
  "itertools 0.10.3",
  "log",
  "lz4_flex",
- "ndshape 0.2.0 (git+https://github.com/bonsairobo/ndshape-rs?rev=8fd240e)",
+ "ndshape 0.2.0 (git+https://github.com/dcz-self/ndshape-rs?rev=82e25b6)",
  "parking_lot",
  "sled 0.34.6 (git+https://github.com/spacejam/sled?rev=c840fe7e)",
  "smallvec",
@@ -2418,7 +2418,7 @@ dependencies = [
 [[package]]
 name = "ndshape"
 version = "0.2.0"
-source = "git+https://github.com/bonsairobo/ndshape-rs?rev=8fd240e#8fd240e84ff5e910181bfbd719c547c6079ad7c5"
+source = "git+https://github.com/dcz-self/ndshape-rs?rev=82e25b6#82e25b6627d0162afacf901ab0c3b92780d93f16"
 dependencies = [
  "static_assertions",
 ]
