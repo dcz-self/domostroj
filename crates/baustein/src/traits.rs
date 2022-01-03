@@ -1,6 +1,7 @@
 /*! Traits for easy access to voxels */
 
-use crate::indices::Index;
+use feldspar_map::units::VoxelUnits;
+use crate::indices::{ Index, usize_to_i32_arr };
 
 
 /// Access to elements of a 3d cuboid region of voxels.
@@ -22,7 +23,7 @@ pub trait Space {
         where F: Fn(Index, Self::Voxel) -> U,
     {
         MapIndex {
-            extent: self,
+            space: self,
             f,
         }
     }
@@ -75,7 +76,7 @@ impl<T: Copy, E, F> Space for Map<E, F>
 
 
 pub struct MapIndex<E, F> {
-    extent: E,
+    space: E,
     f: F,
 }
 
@@ -85,7 +86,7 @@ impl<T: Copy, E: Space, F> Space for MapIndex<E, F>
     type Voxel = T;
 
     fn get(&self, offset: Index) -> Self::Voxel {
-        (self.f)(offset, self.extent.get(offset))
+        (self.f)(offset, self.space.get(offset))
     }
 }
 
@@ -93,10 +94,20 @@ impl<E, F> IterableSpace for MapIndex<E, F>
     where E: IterableSpace,
 {
     fn visit_indices<G: FnMut(Index)>(&self, f: G) {
-        self.extent.visit_indices(f)
+        self.space.visit_indices(f)
     }
 }
 
+impl<S, F> Extent for MapIndex<S, F>
+    where S: Extent
+{
+    fn get_offset(&self) -> Index {
+        self.space.get_offset()
+    }
+    fn get_dimensions(&self) -> [usize; 3] {
+        self.space.get_dimensions()
+    }
+}
 
 pub struct Zip<E, F> {
     left: E,
@@ -124,6 +135,19 @@ impl<E, F> IterableSpace for Zip<E, F>
     }
 }
 
+// FIXME: this also ignores second space.
+impl<S, T> Extent for Zip<S, T>
+    where S: Extent
+{
+    fn get_offset(&self) -> Index {
+        self.left.get_offset()
+    }
+    fn get_dimensions(&self) -> [usize; 3] {
+        self.left.get_dimensions()
+    }
+}
+
+
 pub trait MutChunk {
     type Voxel: Copy;
     fn set(&mut self, offset: Index, value: Self::Voxel);
@@ -147,16 +171,19 @@ impl<T> IterableSpace for &T
     }
 }*/
 
-/* TODO: this is overkill. Yes, Zip is broken without it.
 /// For structures which can cheaply tell the corners
 /// between which all their voxels lie
 pub trait Extent {
     /// The corner with lowest indices in each dimension
     fn get_offset(&self) -> Index;
+    /// The size in each direction
+    fn get_dimensions(&self) -> [usize; 3];
     /// The corner with highest indices in each dimension, plus [1,1,1]
-    fn get_beyond_opposite_corner(&self) -> Index;
+    fn get_beyond_opposite_corner(&self) -> Index {
+        self.get_offset() + VoxelUnits(usize_to_i32_arr(self.get_dimensions()).into())
+    }
 }
-
+/*
 impl IterableSpace for Extent {
     fn visit_indices<F: FnMut(Index)>(&self, f: F) {
         let start = self.get_offset();

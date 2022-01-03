@@ -4,7 +4,7 @@ use ndshape::{ ConstShape, RuntimeShape };
 use std::collections::HashMap;
 use crate::indices::{to_i32_arr, to_u32_arr, to_usize_arr, usize_to_i32_arr, ChunkIndex, Index};
 use crate::prefab::{ PaletteIdChunk, PaletteVoxel, World };
-use crate::traits::{Space, IterableSpace};
+use crate::traits::{Extent, Space, IterableSpace};
 
 // Used traits
 use ndshape::Shape;
@@ -320,6 +320,18 @@ impl<V> IterableSpace for FlatPaddedCuboid<V>
             let idx: Index = usize_to_i32_arr(idx).into();
             f(idx + VoxelUnits(self.offset.0.into()))
         }
+    }
+}
+
+impl<V, S> From<S> for FlatPaddedCuboid<V>
+    where
+    V: Default,
+    S: Space<Voxel=V> + IterableSpace + Extent,
+{
+    fn from(space: S) -> Self {
+        let offset = space.get_offset();
+        let dimensions = space.get_dimensions();
+        Self::new_from_space(&space, offset, dimensions)
     }
 }
 
