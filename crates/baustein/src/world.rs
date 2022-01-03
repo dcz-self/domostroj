@@ -150,21 +150,21 @@ impl<'a, S: IterableSpace, Shape> IterableSpace for View<'a, S, Shape> {
 
 /// Flat 3d array, out-of-bounds gives default voxel.
 /// This should be pretty fast, but not suitable for any large space.
-struct FlatPaddedCuboid<V, Shape: ConstShape<3>> {
+struct FlatPaddedGridCuboid<V, Shape: ConstShape<3>> {
     data: Vec<V>,
     offset: Index,
     shape: PhantomData<Shape>,
 }
 
 /* Const expressions not in stable yet
-struct FlatPaddedCuboid<V, const X: usize, const Y: usize, const Z: usize> {
+struct FlatPaddedGridCuboid<V, const X: usize, const Y: usize, const Z: usize> {
     data: [V; X*Y*Z],
 }
 */
 
 struct OutOfBounds;
 
-impl<V: Default, Shape: ConstShape<3, Coord=u32>> FlatPaddedCuboid<V, Shape> {
+impl<V: Default, Shape: ConstShape<3, Coord=u32>> FlatPaddedGridCuboid<V, Shape> {
     /// Dimensions are determined by the compile-time Shape.
     /// Offset is the lowest point of this cuboid portion.
     fn new_from_space<S: Space<Voxel=V>>(space: &S, offset: Index) -> Self {
@@ -207,7 +207,7 @@ impl<V: Default, Shape: ConstShape<3, Coord=u32>> FlatPaddedCuboid<V, Shape> {
     }
 }
 
-impl<V, Shape> Space for FlatPaddedCuboid<V, Shape>
+impl<V, Shape> Space for FlatPaddedGridCuboid<V, Shape>
     where
     V: Default + Copy,
     Shape: ConstShape<3, Coord=u32>,
@@ -222,7 +222,7 @@ impl<V, Shape> Space for FlatPaddedCuboid<V, Shape>
     }
 }
 
-impl<V, Shape> IterableSpace for FlatPaddedCuboid<V, Shape>
+impl<V, Shape> IterableSpace for FlatPaddedGridCuboid<V, Shape>
     where
     V: Copy,
     Shape: ConstShape<3, Coord=u32>,
