@@ -168,22 +168,22 @@ impl ChunkIndex {
 pub struct Neighbours6<T: Copy>(pub [T; 6]);
 
 impl<T: Copy> Neighbours6<T> {
-    fn xp(&self) -> T {
+    pub fn xp(&self) -> T {
         self.0[0]
     }
-    fn xm(&self) -> T {
+    pub fn xm(&self) -> T {
         self.0[1]
     }
-    fn yp(&self) -> T {
+    pub fn yp(&self) -> T {
         self.0[2]
     }
-    fn ym(&self) -> T {
+    pub fn ym(&self) -> T {
         self.0[3]
     }
-    fn zp(&self) -> T {
+    pub fn zp(&self) -> T {
         self.0[4]
     }
-    fn zm(&self) -> T {
+    pub fn zm(&self) -> T {
         self.0[5]
     }
 }
