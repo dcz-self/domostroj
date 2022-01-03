@@ -74,6 +74,25 @@ impl<T: Copy, E, F> Space for Map<E, F>
     }
 }
 
+impl<E, F> IterableSpace for Map<E, F>
+    where E: IterableSpace,
+{
+    fn visit_indices<G: FnMut(Index)>(&self, f: G) {
+        self.space.visit_indices(f)
+    }
+}
+
+impl<S, F> Extent for Map<S, F>
+    where S: Extent
+{
+    fn get_offset(&self) -> Index {
+        self.space.get_offset()
+    }
+    fn get_dimensions(&self) -> [usize; 3] {
+        self.space.get_dimensions()
+    }
+}
+
 
 pub struct MapIndex<E, F> {
     space: E,

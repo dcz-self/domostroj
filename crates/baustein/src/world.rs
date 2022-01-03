@@ -4,7 +4,7 @@ use ndshape::{ ConstShape, RuntimeShape };
 use std::collections::HashMap;
 use crate::indices::{to_i32_arr, to_u32_arr, to_usize_arr, usize_to_i32_arr, ChunkIndex, Index};
 use crate::prefab::{ PaletteIdChunk, PaletteVoxel, World };
-use crate::traits::{Extent, Space, IterableSpace};
+use crate::traits::{Extent, Space, IterableSpace, Map, MapIndex, Zip};
 
 // Used traits
 use ndshape::Shape;
@@ -323,10 +323,20 @@ impl<V> IterableSpace for FlatPaddedCuboid<V>
     }
 }
 
+
+impl<V> Extent for FlatPaddedCuboid<V> {
+    fn get_offset(&self) -> Index {
+        self.offset
+    }
+    fn get_dimensions(&self) -> [usize; 3] {
+        self.dimensions
+    }
+}
+
 impl<V, S> From<S> for FlatPaddedCuboid<V>
     where
     V: Default,
-    S: Space<Voxel=V> + IterableSpace + Extent,
+    S: Space<Voxel=V> + IterableSpace + Extent + IntoCuboid,
 {
     fn from(space: S) -> Self {
         let offset = space.get_offset();
@@ -334,6 +344,18 @@ impl<V, S> From<S> for FlatPaddedCuboid<V>
         Self::new_from_space(&space, offset, dimensions)
     }
 }
+
+/// A marker to denote that `Into<Cuboid>` can be derived for this type.
+/// This is needed because `Into<Cuboid>` needs traits that are already defined on `Cuboid`,
+/// so conflicts with `impl<T> From<T> for T;` from core.
+/// Requiring an extra trait defined for all but Cuboid resolves that problem.
+pub trait IntoCuboid {}
+
+impl<E, F> IntoCuboid for MapIndex<E, F>{}
+
+impl<E, F> IntoCuboid for Map<E, F>{}
+
+impl<E, F> IntoCuboid for Zip<E, F>{}
 
 #[cfg(test)]
 mod test {
