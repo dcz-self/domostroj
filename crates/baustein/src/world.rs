@@ -239,7 +239,7 @@ impl<V, Shape> IterableSpace for FlatPaddedGridCuboid<V, Shape>
 
 /// Flat 3d array, out-of-bounds gives default voxel.
 /// This should be pretty fast, but not suitable for any large space.
-struct FlatPaddedCuboid<V> {
+pub struct FlatPaddedCuboid<V> {
     data: Vec<V>,
     offset: Index,
     dimensions: [usize; 3],
@@ -247,7 +247,7 @@ struct FlatPaddedCuboid<V> {
 
 impl<V: Default> FlatPaddedCuboid<V> {
     /// Offset is the lowest point of this cuboid portion.
-    fn new_from_space<S>(space: &S, offset: Index, dimensions: [usize; 3]) -> Self
+    pub fn new_from_space<S>(space: &S, offset: Index, dimensions: [usize; 3]) -> Self
         where S: Space<Voxel=V>
     {
         let shape = RuntimeShape::<usize, 3>::new(dimensions);

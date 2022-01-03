@@ -161,7 +161,6 @@ pub trait IterableSpace {
     fn visit_indices<F: FnMut(Index)>(&self, f: F);
 }
 
-/*
 impl<T> IterableSpace for &T
     where
     T: IterableSpace,
@@ -169,7 +168,7 @@ impl<T> IterableSpace for &T
     fn visit_indices<F: FnMut(Index)>(&self, f: F) {
         (*self).visit_indices(f)
     }
-}*/
+}
 
 /// For structures which can cheaply tell the corners
 /// between which all their voxels lie
@@ -183,6 +182,19 @@ pub trait Extent {
         self.get_offset() + VoxelUnits(usize_to_i32_arr(self.get_dimensions()).into())
     }
 }
+
+impl<T> Extent for &T
+    where T: Extent
+{
+    fn get_offset(&self) -> Index {
+        self.get_offset()
+    }
+    /// The size in each direction
+    fn get_dimensions(&self) -> [usize; 3] {
+        self.get_dimensions()
+    }
+}
+
 /*
 impl IterableSpace for Extent {
     fn visit_indices<F: FnMut(Index)>(&self, f: F) {
@@ -196,3 +208,16 @@ impl IterableSpace for Extent {
 // TODO: a Chunk trait should include the shape.
 // a World trait should include the grid
 
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::prefab::World;
+    use crate::world::FlatPaddedCuboid;
+    
+    fn t<S: Space<Voxel=()> + Extent + IterableSpace>(s: &S) {
+        let s: FlatPaddedCuboid<_> = s.zip(s)
+            .zip(s)
+            .into();
+    }
+
+}

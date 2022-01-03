@@ -87,7 +87,9 @@ impl IterableSpace for PaletteIdChunk {
     }
 }
 
+// TODO: implement a macro for this
 
+/*
 impl<T> IterableSpace for T where T: ConstShape<3, Coord=u32> {
     fn visit_indices<F: FnMut(Index)>(&self, f: F) {
         (0..T::SIZE)
@@ -95,7 +97,7 @@ impl<T> IterableSpace for T where T: ConstShape<3, Coord=u32> {
             .map(|index| to_i32_arr(index).into())
             .for_each(f);
     }
-}
+}*/
 
 /// A really terrible, simple world type
 /// What do I want from the world?
@@ -156,6 +158,16 @@ mod test {
     #[test]
     fn test_iterable_chunk() {
         use ndshape::ConstPow2Shape3u32;
+
+        impl<const X: u32, const Y: u32, const Z: u32> IterableSpace for ConstPow2Shape3u32<X, Y, Z> {
+            fn visit_indices<F: FnMut(Index)>(&self, f: F) {
+                (0..Self::SIZE)
+                    .map(|i| Self::delinearize(i))
+                    .map(|index| to_i32_arr(index).into())
+                    .for_each(f);
+            }
+        }
+        
         type Shape = ConstPow2Shape3u32<1, 1, 1>;
         let shape = Shape {};
         let mut indices = HashSet::new();
