@@ -7,6 +7,7 @@ use baustein::indices::Neighbours6;
 use baustein::traits::{ Extent, IterableSpace, Space };
 use baustein::world::FlatPaddedCuboid;
 use float_ord::FloatOrd;
+use genawaiter::{rc::gen, yield_, Generator};
 use std::ops;
 
 
@@ -43,6 +44,12 @@ pub enum StressVoxel {
     /// Like Bound with class 0, infinite strength.
     /// Exists to make analysis stop.
     Bedrock,
+}
+
+impl Default for StressVoxel {
+    fn default() -> Self {
+        StressVoxel::Empty
+    }
 }
 
 /// Forces in the down direction
@@ -151,21 +158,24 @@ where
         .into()
 }
 
-fn solve<SF, SV, SO>(external_forces: &SF, space: &SV, threshold: f32)
-    -> FlatPaddedCuboid<Force>
+fn solve<'a, SF, SV>(external_forces: &'a SF, space: &'a SV)
+    -> impl Generator<Yield=(f32, FlatPaddedCuboid<Force>)> + 'a
 where
     SF: Space<Voxel=Force> + Extent + IterableSpace,
     SV: Space<Voxel=StressVoxel> + Extent + IterableSpace,
 {
-    let mut sixforces = get_initial_forces(external_forces, space);
-    loop {
-        let balance = process_newton_discrepancy(&sixforces);
-        // Yield sixforces, balance here for stepped execution.
-        if get_newton_global_loss(&balance) < threshold {
-            return sixforces.map(|sf| get_load_sum(sf)).into();
+    gen!({
+        let mut sixforces = get_initial_forces(external_forces, space);
+        loop {
+            let balance = process_newton_discrepancy(&sixforces);
+            // TODO: return loss, sixforces. Let caller decide if they need the loads
+            yield_!((
+                get_newton_global_loss(&balance),
+                sixforces.map(|sf| get_load_sum(sf)).into()
+            ));
+            sixforces = distribute(space, &balance, &sixforces);
         }
-        sixforces = distribute(space, &balance, &sixforces);
-    }
+    })
 }
 
 /// That which applies voxel-wise.
@@ -234,5 +244,34 @@ mod voxel {
             voxel.yp() + space.get(nb.yp()).ym(),
             voxel.zp() + space.get(nb.zp()).zm(),
         ])
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use baustein::world::FlatPaddedGridCuboid;
+    use baustein::re::ConstPow2Shape;
+    use std::pin::Pin;
+    
+    /// Checks a single bedrock voxel
+    #[test]
+    fn bedrock() {
+        use genawaiter::GeneratorState::*;
+        // 2x2x2
+        type Shape = ConstPow2Shape<1, 1, 1>;
+        let mut world = FlatPaddedGridCuboid::<StressVoxel, Shape>::new([0, 0, 0].into());
+        world.set([0, 0, 0].into(), StressVoxel::Bedrock).unwrap();
+
+        // For this algorithm, empty is ignored, and bedrock forces should too.
+        let grav = world.map(|v| Force(1.0));
+        let mut solver = solve(&grav, &world);
+        let solver = Pin::new(&mut solver);
+        if let Yielded((loss, forces)) = solver.resume() {
+            println!("loss: {}", loss);
+            // Actually not sure what the force on bedrock should be
+            assert_eq!(forces.get([0, 0, 0].into()).0, 0.0);
+        };
     }
 }

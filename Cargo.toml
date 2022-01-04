@@ -17,16 +17,13 @@ baustein = { path = "crates/baustein" }
 env_logger = "0.8"
 futures = "0.3"
 float-ord = "0.3"
+genawaiter = "0.99"
 log = "0.4"
 ron = "0.6"
 serde = "1.0"
 
 [dependencies.bevy]
 version = "0.5"
-# path = "../bevy"
-# git = "https://github.com/bevyengine/bevy"
-# branch = "main"
-# rev = "7a511394"
 default-features = false
 features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"]
 
