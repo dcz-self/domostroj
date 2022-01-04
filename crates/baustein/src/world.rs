@@ -4,6 +4,7 @@ use ndshape::{ ConstShape, RuntimeShape };
 use std::collections::HashMap;
 use crate::indices::{to_i32_arr, to_u32_arr, to_usize_arr, usize_to_i32_arr, ChunkIndex, Index};
 use crate::prefab::{ PaletteIdChunk, PaletteVoxel, World };
+use crate::re;
 use crate::traits::{Extent, Space, IterableSpace, Map, MapIndex, Zip};
 
 // Used traits
@@ -163,7 +164,8 @@ struct FlatPaddedGridCuboid<V, const X: usize, const Y: usize, const Z: usize> {
 }
 */
 
-struct OutOfBounds;
+#[derive(Debug)]
+pub struct OutOfBounds;
 
 impl<V: Default + Copy, Shape: ConstShape<3, Coord=usize>> FlatPaddedGridCuboid<V, Shape> {
     /// Creates a new one filled with emptiness
@@ -208,7 +210,7 @@ impl<V: Default + Copy, Shape: ConstShape<3, Coord=usize>> FlatPaddedGridCuboid<
         true
     }
 
-    fn set(&mut self, offset: Index, value: V) -> Result<(), OutOfBounds> {
+    pub fn set(&mut self, offset: Index, value: V) -> Result<(), OutOfBounds> {
         if self.contains(offset) {
             self.data[Shape::linearize(to_usize_arr(offset.into()))] = value;
             Ok(())
@@ -244,6 +246,16 @@ impl<V, Shape> IterableSpace for FlatPaddedGridCuboid<V, Shape>
             let idx: Index = usize_to_i32_arr(idx).into();
             f(idx + VoxelUnits(self.offset.0.into()))
         }
+    }
+}
+
+impl<V, Shape> Extent for FlatPaddedGridCuboid<V, Shape>
+    where Shape: re::ConstShape {
+    fn get_offset(&self) -> Index {
+        self.offset
+    }
+    fn get_dimensions(&self) -> [usize; 3] {
+        <Shape as re::ConstShape>::ARRAY
     }
 }
 
@@ -332,7 +344,6 @@ impl<V> IterableSpace for FlatPaddedCuboid<V>
         }
     }
 }
-
 
 impl<V> Extent for FlatPaddedCuboid<V> {
     fn get_offset(&self) -> Index {
