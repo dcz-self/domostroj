@@ -206,11 +206,11 @@ impl<T> Extent for &T
     where T: Extent
 {
     fn get_offset(&self) -> Index {
-        self.get_offset()
+        (*self).get_offset()
     }
     /// The size in each direction
     fn get_dimensions(&self) -> [usize; 3] {
-        self.get_dimensions()
+        (*self).get_dimensions()
     }
 }
 
