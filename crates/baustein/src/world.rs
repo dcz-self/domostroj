@@ -151,7 +151,7 @@ impl<'a, S: IterableSpace, Shape> IterableSpace for View<'a, S, Shape> {
 
 /// Flat 3d array, out-of-bounds gives default voxel.
 /// This should be pretty fast, but not suitable for any large space.
-struct FlatPaddedGridCuboid<V, Shape: ConstShape<3>> {
+pub struct FlatPaddedGridCuboid<V, Shape: ConstShape<3>> {
     data: Vec<V>,
     offset: Index,
     shape: PhantomData<Shape>,
@@ -165,14 +165,24 @@ struct FlatPaddedGridCuboid<V, const X: usize, const Y: usize, const Z: usize> {
 
 struct OutOfBounds;
 
-impl<V: Default, Shape: ConstShape<3, Coord=u32>> FlatPaddedGridCuboid<V, Shape> {
+impl<V: Default + Copy, Shape: ConstShape<3, Coord=usize>> FlatPaddedGridCuboid<V, Shape> {
+    /// Creates a new one filled with emptiness
+    pub fn new(offset: Index) -> Self {
+        let mut data = Vec::with_capacity(Shape::SIZE as usize);
+        data.resize(Shape::SIZE, V::default());
+        Self {
+            data,
+            offset,
+            shape: Default::default(),
+        }
+    }
     /// Dimensions are determined by the compile-time Shape.
     /// Offset is the lowest point of this cuboid portion.
     fn new_from_space<S: Space<Voxel=V>>(space: &S, offset: Index) -> Self {
         let mut data = Vec::with_capacity(Shape::SIZE as usize);
         for i in 0..Shape::SIZE {
             let idx = <Shape as ConstShape<3>>::delinearize(i);
-            let idx: Index = to_i32_arr(idx).into();
+            let idx: Index = usize_to_i32_arr(idx).into();
             data[i as usize] = space.get(idx + VoxelUnits(offset.0.into()));
         }
         Self {
@@ -184,7 +194,7 @@ impl<V: Default, Shape: ConstShape<3, Coord=u32>> FlatPaddedGridCuboid<V, Shape>
 
     /// Returns the index that's actuallly the corner, e.g. not 1 unit beyond
     fn opposite_corner(&self) -> Index {
-        self.offset + VoxelUnits(to_i32_arr(Shape::ARRAY).into()) - VoxelUnits([1, 1, 1].into())
+        self.offset + VoxelUnits(usize_to_i32_arr(Shape::ARRAY).into()) - VoxelUnits([1, 1, 1].into())
     }
 
     fn contains(&self, index: Index) -> bool {
@@ -198,9 +208,9 @@ impl<V: Default, Shape: ConstShape<3, Coord=u32>> FlatPaddedGridCuboid<V, Shape>
         true
     }
 
-    fn set(&mut self, index: Index, value: V) -> Result<(), OutOfBounds> {
-        if self.contains(index) {
-            self.data[Shape::linearize(to_u32_arr(index.into())) as usize] = value;
+    fn set(&mut self, offset: Index, value: V) -> Result<(), OutOfBounds> {
+        if self.contains(offset) {
+            self.data[Shape::linearize(to_usize_arr(offset.into()))] = value;
             Ok(())
         } else {
             Err(OutOfBounds)
@@ -211,12 +221,12 @@ impl<V: Default, Shape: ConstShape<3, Coord=u32>> FlatPaddedGridCuboid<V, Shape>
 impl<V, Shape> Space for FlatPaddedGridCuboid<V, Shape>
     where
     V: Default + Copy,
-    Shape: ConstShape<3, Coord=u32>,
+    Shape: ConstShape<3, Coord=usize>,
 {
     type Voxel = V;
     fn get(&self, offset: Index) -> Self::Voxel {
         if self.contains(offset) {
-            self.data[Shape::linearize(to_u32_arr(offset.into())) as usize]
+            self.data[Shape::linearize(to_usize_arr(offset.into()))]
         } else {
             Default::default()
         }
@@ -226,12 +236,12 @@ impl<V, Shape> Space for FlatPaddedGridCuboid<V, Shape>
 impl<V, Shape> IterableSpace for FlatPaddedGridCuboid<V, Shape>
     where
     V: Copy,
-    Shape: ConstShape<3, Coord=u32>,
+    Shape: ConstShape<3, Coord=usize>,
 {
     fn visit_indices<F: FnMut(Index)>(&self, mut f: F) {
         for i in 0..Shape::SIZE {
             let idx = <Shape as ConstShape<3>>::delinearize(i);
-            let idx: Index = to_i32_arr(idx).into();
+            let idx: Index = usize_to_i32_arr(idx).into();
             f(idx + VoxelUnits(self.offset.0.into()))
         }
     }

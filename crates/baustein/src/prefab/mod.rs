@@ -5,10 +5,11 @@ mod feldspar;
 use block_mesh::{ MergeVoxel, Voxel };
 use feldspar_map::palette::PaletteId8;
 use ndshape::ConstPow2Shape3u32;
+use ndshape::ConstPow2Shape3usize;
 use std::collections::HashMap;
 use std::fmt;
 
-use crate::indices::{ to_i32_arr, to_u32_arr, ChunkIndex, Index, WorldIndex };
+use crate::indices::{ to_i32_arr, to_u32_arr, usize_to_i32_arr, ChunkIndex, Index, WorldIndex };
 use crate::traits::{ IterableSpace, MutChunk, Space };
 use crate::world::Cow;
 
@@ -148,6 +149,15 @@ impl Space for World {
     }
 }
 
+impl<const X: usize, const Y: usize, const Z: usize> IterableSpace for ConstPow2Shape3usize<X, Y, Z> {
+    fn visit_indices<F: FnMut(Index)>(&self, f: F) {
+        (0..Self::SIZE)
+            .map(|i| Self::delinearize(i))
+            .map(|index| usize_to_i32_arr(index).into())
+            .for_each(f);
+    }
+}
+
 
 #[cfg(test)]
 mod test {
@@ -157,18 +167,7 @@ mod test {
 
     #[test]
     fn test_iterable_chunk() {
-        use ndshape::ConstPow2Shape3u32;
-
-        impl<const X: u32, const Y: u32, const Z: u32> IterableSpace for ConstPow2Shape3u32<X, Y, Z> {
-            fn visit_indices<F: FnMut(Index)>(&self, f: F) {
-                (0..Self::SIZE)
-                    .map(|i| Self::delinearize(i))
-                    .map(|index| to_i32_arr(index).into())
-                    .for_each(f);
-            }
-        }
-        
-        type Shape = ConstPow2Shape3u32<1, 1, 1>;
+        type Shape = ConstPow2Shape3usize<1, 1, 1>;
         let shape = Shape {};
         let mut indices = HashSet::new();
         shape.visit_indices(|i| { indices.insert(i);     });
