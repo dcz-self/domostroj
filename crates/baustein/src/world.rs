@@ -185,7 +185,7 @@ impl<V: Default + Copy, Shape: ConstShape<3, Coord=usize>> FlatPaddedGridCuboid<
         for i in 0..Shape::SIZE {
             let idx = <Shape as ConstShape<3>>::delinearize(i);
             let idx: Index = usize_to_i32_arr(idx).into();
-            data[i as usize] = space.get(idx + VoxelUnits(offset.0.into()));
+            data.push(space.get(idx + VoxelUnits(offset.0.into())));
         }
         Self {
             data,
@@ -277,7 +277,7 @@ impl<V: Default> FlatPaddedCuboid<V> {
         for i in 0..(shape.size()) {
             let idx = shape.delinearize(i);
             let idx: Index = usize_to_i32_arr(idx).into();
-            data[i as usize] = space.get(idx + VoxelUnits(offset.0.into()));
+            data.push(space.get(idx + VoxelUnits(offset.0.into())));
         }
         Self {
             data,
