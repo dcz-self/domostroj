@@ -270,3 +270,34 @@ pub fn spin_spinners(
         *transform = transform.mul_transform(rot_step);
     }
 }
+
+pub mod stress {
+    use super::*;
+
+    use baustein::re::ConstPow2Shape;
+    use baustein::world::FlatPaddedGridCuboid;
+
+    use crate::stress::Stress;
+
+    type Shape = ConstPow2Shape<4, 4, 4>;
+
+    fn test_stress() -> FlatPaddedGridCuboid::<Stress, Shape> {
+        let mut chunk = FlatPaddedGridCuboid::new([-9, -9, -9].into());
+        for x in 0..5 {
+            for y in 0..2 {
+                for z in 0..3 {
+                    chunk.set([x, y, z].into(), Stress((x * y * z) as f32));
+                }
+            }
+        }
+        chunk
+    }
+
+    pub fn create_test_stress(
+        mut commands: Commands,
+    ) {
+        commands.spawn()
+            .insert(test_spinner())
+            .insert(Transform::default());
+    }
+}

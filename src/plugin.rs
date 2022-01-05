@@ -166,6 +166,7 @@ fn wait_for_assets_loaded(
 
         commands.insert_resource(VoxelRenderAssets {
             mesh_base_color: loading_texture.0.clone(),
+            image_count: 4,
         });
         state.set(EditorState::Editing).unwrap();
     }

@@ -10,7 +10,7 @@ use bevy::prelude::*;
 use block_mesh::ndshape::ConstShape3u32;
 use block_mesh::{greedy_quads, GreedyQuadsBuffer, MergeVoxel, RIGHT_HANDED_Y_UP_CONFIG, UnorientedQuad};
 use feldspar::bb::mesh::PosNormMesh;
-use feldspar::prelude::{MeshMaterial, SdfVoxelPalette, VoxelType, VoxelTypeInfo, VoxelMaterial};
+use feldspar::prelude::{ArrayMaterial, SdfVoxelPalette, VoxelType, VoxelTypeInfo, VoxelMaterial};
 use feldspar::renderer::create_voxel_mesh_bundle;
 use ndshape::ConstShape;
 
@@ -50,6 +50,15 @@ impl app::Plugin for Plugin {
                     material: VoxelMaterial(3),
                 },
             ]));
+    }
+}
+
+#[derive(Default)]
+pub struct MeshMaterial(pub Handle<ArrayMaterial>);
+
+impl From<Handle<ArrayMaterial>> for MeshMaterial {
+    fn from(v: Handle<ArrayMaterial>) -> Self {
+        Self(v)
     }
 }
 
@@ -220,7 +229,7 @@ fn generate_mesh_for_chunk(
     mesh_from_quads(buffer, &view, material_lookup)
 }
 
-fn mesh_from_quads<S, V, M, F>(
+pub fn mesh_from_quads<S, V, M, F>(
     buffer: GreedyQuadsBuffer,
     view: &S,
     mut vertex_map: F,

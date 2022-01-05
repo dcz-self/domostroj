@@ -11,6 +11,7 @@ mod geometry;
 mod immediate_mode;
 mod picking;
 mod plugin;
+//mod render;
 mod stress;
 
 use camera::{create_camera_entity, CameraPlugin, CursorRay};

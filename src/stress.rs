@@ -101,7 +101,7 @@ impl ops::Sub<Force> for Force {
 }
 
 #[derive(Clone, Copy, Default)]
-struct Stress(f32);
+pub struct Stress(pub f32);
 
 
 /// This kind of analysis requires bedrock to exist:
