@@ -483,4 +483,45 @@ mod test {
         assert_float_absolute_eq!(balance.get([1, 1, 1].into()).imbalance().0, 0.0);
         assert_float_absolute_eq!(balance.get([1, 1, 2].into()).imbalance().0, 0.0);
     }
+
+    /// Checks two voxels: one bound to bedrock.
+    #[test]
+    fn bound2b() {
+        use genawaiter::GeneratorState::*;
+        // 4x4x4
+        type Shape = ConstPow2Shape<2, 2, 2>;
+        let mut world = FlatPaddedGridCuboid::<StressVoxel, Shape>::new([0, 0, 0].into());
+        world.set([1, 1, 1].into(), StressVoxel::Bedrock).unwrap();
+        world.set([1, 1, 2].into(), StressVoxel::Bound).unwrap();
+        world.set([1, 1, 3].into(), StressVoxel::Bound).unwrap();
+
+        // For this algorithm, empty is ignored, and bedrock forces should too.
+        let weights = world.map(|v| Force(1.0));
+        let mut outforces = get_initial_forces(&world);
+
+        for i in 0..10 {
+            outforces = distribute(&world, &weights, &outforces);
+            let balance = process_newton_discrepancy(&outforces);
+            println!("i {} bedrock {}", i, balance.get([1, 1, 1].into()).imbalance().0);
+            println!("bound {}", balance.get([1, 1, 2].into()).imbalance().0);
+            println!("bound {}", balance.get([1, 1, 3].into()).imbalance().0);
+            
+            println!("{:?}", outforces.get([1, 1, 1].into()));
+            println!("{:?}", outforces.get([1, 1, 2].into()));
+            println!("{:?}", outforces.get([1, 1, 3].into()));
+        }
+        
+        let balance = process_newton_discrepancy(&outforces);
+
+        let stresses = outforces.map(|sf| get_load_sum(sf));
+        assert_float_absolute_eq!(stresses.get([1, 1, 2].into()).0, 2.0, 0.1);
+        assert_float_absolute_eq!(stresses.get([1, 1, 3].into()).0, 1.0, 0.1);
+        // get_load_sum is unable to calculate stress on bedrock,
+        // because sum of forces will be negative
+        
+        // This should end up well balanced
+        assert_float_absolute_eq!(balance.get([1, 1, 1].into()).imbalance().0, 0.0, 0.1);
+        assert_float_absolute_eq!(balance.get([1, 1, 2].into()).imbalance().0, 0.0, 0.1);
+        assert_float_absolute_eq!(balance.get([1, 1, 3].into()).imbalance().0, 0.0, 0.1);
+    }
 }
