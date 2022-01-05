@@ -40,6 +40,16 @@
  * Goals are not satisfied in the beginning, but hopely get closer with each iteration.
  * 
  * 1. For each voxel, sum(outward forces) = sum(inward forces)
+ *
+ * ## TODO
+ *
+ * The distribution converges rather slowly in the case of 2 elements and a bedrock.
+ * Possible improvements:
+ * 1. When neighboring voxel request F force,
+ * overshoot in compensation and give a*F. At least once in a while.
+ * 2. Move bedrock handling to the neighbors:
+ * let them dump *all* of their forces on the first found one.
+ * Note that this won't solve propagation far away from bedrock.
  */
 
 use baustein::indices::{Neighbours6, NamedNeighbours6};
