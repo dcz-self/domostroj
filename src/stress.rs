@@ -100,6 +100,10 @@ impl ops::Sub<Force> for Force {
     }
 }
 
+#[derive(Clone, Copy, Default)]
+struct Stress(f32);
+
+
 /// This kind of analysis requires bedrock to exist:
 /// voxels which can take on any stress.
 #[derive(Clone, Copy)]
@@ -126,10 +130,10 @@ impl Default for StressVoxel {
 type SixForces = Neighbours6<Force>;
 
 /// Returns the total load acting on the voxel
-/// This is only a magnitude. This should be used to determine destruction. 
-fn get_load(sf: SixForces) -> Force {
+/// This is only a magnitude. This should be used to determine destruction.
+fn get_stress(sf: SixForces) -> Stress {
     // Maximum force. It's rather naive but fast
-    Force(
+    Stress(
         sf.0.iter()
             .map(|f| f.0.abs())
             .map(|f| FloatOrd(f))
@@ -141,8 +145,8 @@ fn get_load(sf: SixForces) -> Force {
 
 /// Same as get_load, but maybe a bit more accurate. Slower?
 /// Caution: doesn't work on objects of negative weight.
-fn get_load_sum(sf: SixForces) -> Force {
-    Force(
+fn get_stress_sum(sf: SixForces) -> Stress {
+    Stress(
         sf.0.iter()
             .map(|f| f.0)
             .filter(|f| *f > 0.0)
@@ -244,7 +248,7 @@ fn calculate_loss<FS>(forces: &FS) -> f32
 /// 1x1x1 contributes 0 loss and experiences 0 strain,
 /// while bigger ones contributes to loss but carries no strain.
 fn solve<'a, SF, SV>(weights: &'a SF, space: &'a SV, threshold: f32)
-    -> FlatPaddedCuboid<Force>
+    -> FlatPaddedCuboid<Stress>
 where
     SF: Space<Voxel=Force> + Extent + IterableSpace,
     SV: Space<Voxel=StressVoxel> + Extent + IterableSpace,
@@ -261,7 +265,7 @@ where
             // Overall divergence from Newton's laws. Closer to 0 is better.
             let overall = calculate_loss(&forces);
             if overall < threshold {
-                return forces.map(|sf| get_load_sum(sf)).into()
+                return forces.map(|sf| get_stress_sum(sf)).into()
             }
         }
     }
@@ -484,7 +488,7 @@ mod test {
         
         let balance = process_newton_discrepancy(&outforces);
 
-        let stresses = outforces.map(|sf| get_load_sum(sf));
+        let stresses = outforces.map(|sf| get_stress_sum(sf));
         assert_float_absolute_eq!(stresses.get([1, 1, 1].into()).0, 1.0);
         // get_load_sum is unable to calculate stress on bedrock,
         // because sum of forces will be negative
@@ -523,7 +527,7 @@ mod test {
         
         let balance = process_newton_discrepancy(&outforces);
 
-        let stresses = outforces.map(|sf| get_load_sum(sf));
+        let stresses = outforces.map(|sf| get_stress_sum(sf));
         assert_float_absolute_eq!(stresses.get([1, 1, 2].into()).0, 2.0, 0.1);
         assert_float_absolute_eq!(stresses.get([1, 1, 3].into()).0, 1.0, 0.1);
         // get_load_sum is unable to calculate stress on bedrock,
