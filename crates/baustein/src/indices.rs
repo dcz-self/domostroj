@@ -188,6 +188,24 @@ impl<T: Copy> Neighbours6<T> {
     }
 }
 
+/// Another name for the same thing.
+/// Maybe better than the original.
+#[derive(Default, Clone, Copy)]
+pub struct NamedNeighbours6<T> {
+    pub xp: T,
+    pub xm: T,
+    pub yp: T,
+    pub ym: T,
+    pub zp: T,
+    pub zm: T,
+}
+
+impl<T: Copy> From<NamedNeighbours6<T>> for Neighbours6<T> {
+    fn from(nn: NamedNeighbours6<T>) -> Self {
+        Self([nn.xp, nn.xm, nn.yp, nn.ym, nn.zp, nn.zm])
+    }
+}
+
 
 #[cfg(test)]
 mod test {
