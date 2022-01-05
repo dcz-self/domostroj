@@ -1,9 +1,14 @@
 /*! Rendering.
- * Depends on parts of feldspar's rendering pipeline. */
+ * Depends on parts of feldspar's rendering pipeline.
+ * Most of this should be only suggested use,
+ * and an inspiration for your own library.
+ * Mesh generation is probably reuseable.
+ *
+ * TODO: which parts should end up in prefab? */
 use bevy::app;
 use bevy::prelude::*;
 use block_mesh::ndshape::ConstShape3u32;
-use block_mesh::{greedy_quads, GreedyQuadsBuffer, MergeVoxel, RIGHT_HANDED_Y_UP_CONFIG};
+use block_mesh::{greedy_quads, GreedyQuadsBuffer, MergeVoxel, RIGHT_HANDED_Y_UP_CONFIG, UnorientedQuad};
 use feldspar::bb::mesh::PosNormMesh;
 use feldspar::prelude::{MeshMaterial, SdfVoxelPalette, VoxelType, VoxelTypeInfo, VoxelMaterial};
 use feldspar::renderer::create_voxel_mesh_bundle;
@@ -135,7 +140,12 @@ pub fn generate_transformeshes(
         );
         let quads = generate_greedy_buffer(view.clone());
 
-        let mesh = mesh_from_quads(quads, &palette, view);
+        let material_lookup = |quad: &UnorientedQuad| {
+            let material = to_material(&palette, view.get(to_i32_arr(quad.minimum).into()));
+            [material, material, material, material]
+        };
+
+        let mesh = mesh_from_quads(quads, &view, material_lookup);
         if let Some((mesh, materials)) = mesh {
             commands
                 .spawn_bundle(
@@ -201,14 +211,25 @@ fn generate_mesh_for_chunk(
         &faces,
         &mut buffer,
     );
-    mesh_from_quads(buffer, palette, view)
+    
+    let material_lookup = |quad: &UnorientedQuad| {
+        let material = to_material(&palette, view.get(to_i32_arr(quad.minimum).into()));
+        [material, material, material, material]
+    };
+    
+    mesh_from_quads(buffer, &view, material_lookup)
 }
 
-fn mesh_from_quads<S: Space<Voxel=PaletteVoxel>>(
+fn mesh_from_quads<S, V, M, F>(
     buffer: GreedyQuadsBuffer,
-    palette: &SdfVoxelPalette,
-    view: S,
-) -> Option<(PosNormMesh, Vec<[u8; 4]>)> {
+    view: &S,
+    mut vertex_map: F,
+) -> Option<(PosNormMesh, Vec<M>)>
+where
+    M: Clone,
+    S: Space<Voxel=V>,
+    F: FnMut(&UnorientedQuad) -> [M; 4],
+{
     if buffer.quads.num_quads() == 0 {
         None
     } else {
@@ -218,15 +239,15 @@ fn mesh_from_quads<S: Space<Voxel=PaletteVoxel>>(
         let mut indices = Vec::with_capacity(num_indices);
         let mut positions = Vec::with_capacity(num_vertices);
         let mut normals = Vec::with_capacity(num_vertices);
-        let mut materials = Vec::with_capacity(num_vertices);
+        let mut vertex_metadata = Vec::with_capacity(num_vertices);
         let faces = RIGHT_HANDED_Y_UP_CONFIG.faces;
         for (group, face) in buffer.quads.groups.into_iter().zip(faces.into_iter()) {
             for quad in group.into_iter() {
                 indices.extend_from_slice(&face.quad_mesh_indices(positions.len() as u32));
                 positions.extend_from_slice(&face.quad_mesh_positions(&quad, 1.0));
                 normals.extend_from_slice(&face.quad_mesh_normals());
-                let material = to_material(&palette, view.get(to_i32_arr(quad.minimum).into()));
-                materials.extend_from_slice(&[material, material, material, material]);
+                
+                vertex_metadata.extend_from_slice(&vertex_map(&quad));
             }
         }
 
@@ -236,11 +257,10 @@ fn mesh_from_quads<S: Space<Voxel=PaletteVoxel>>(
                 normals,
                 indices,
             },
-            materials,
+            vertex_metadata,
         ))
     }
 }
-
 
 fn to_material(palette: &SdfVoxelPalette, v: PaletteVoxel) -> [u8; 4] {
     let mut materials = [0; 4];
