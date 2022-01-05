@@ -13,6 +13,7 @@ release = { lto = "thin" }
 
 [dependencies]
 approx = "0.4"
+assert_float_eq = { path = "external/assert_float_eq" }
 baustein = { path = "crates/baustein" }
 env_logger = "0.8"
 futures = "0.3"

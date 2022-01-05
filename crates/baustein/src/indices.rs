@@ -164,7 +164,7 @@ impl ChunkIndex {
 
 /// Ordered collection of properties of neighbours.
 /// x+ x- y+ y- z+ z-
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, Debug)]
 pub struct Neighbours6<T: Copy>(pub [T; 6]);
 
 impl<T: Copy> Neighbours6<T> {

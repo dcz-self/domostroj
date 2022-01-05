@@ -1,3 +1,6 @@
+#[cfg(test)]
+#[macro_use]
+extern crate assert_float_eq;
 mod camera;
 mod config;
 mod cursor_tracker;

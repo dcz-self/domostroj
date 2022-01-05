@@ -47,6 +47,7 @@ use baustein::traits::{ Extent, IterableSpace, Space };
 use baustein::world::FlatPaddedCuboid;
 use float_ord::FloatOrd;
 use genawaiter::{rc::gen, yield_, Generator};
+use std::fmt;
 use std::ops;
 
 
@@ -61,6 +62,12 @@ impl Mass {
 
 #[derive(Clone, Copy, Default)]
 pub struct Force(f32);
+
+impl fmt::Debug for Force {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        self.0.fmt(f)
+    }
+}
 
 impl ops::Neg for Force {
     type Output = Force;
@@ -123,6 +130,7 @@ fn get_load(sf: SixForces) -> Force {
 }
 
 /// Same as get_load, but maybe a bit more accurate. Slower?
+/// Caution: doesn't work on objects of negative weight.
 fn get_load_sum(sf: SixForces) -> Force {
     Force(
         sf.0.iter()
@@ -410,9 +418,9 @@ mod test {
 
         // For this algorithm, empty is ignored, and bedrock forces should too.
         let weights = world.map(|v| Force(1.0));
-        let mut solver = get_initial_forces(&world);
+        let outforces = get_initial_forces(&world);
 
-        let outforces = distribute(&world, &weights, &solver);
+        let outforces = distribute(&world, &weights, &outforces);
         
         let balance = process_newton_discrepancy(&outforces);
 
@@ -432,12 +440,47 @@ mod test {
 
         // For this algorithm, empty is ignored, and bedrock forces should too.
         let weights = world.map(|v| Force(1.0));
-        let mut solver = get_initial_forces(&world);
+        let outforces = get_initial_forces(&world);
 
-        let outforces = distribute(&world, &weights, &solver);
+        let outforces = distribute(&world, &weights, &outforces);
         
         let balance = process_newton_discrepancy(&outforces);
 
         assert_eq!(balance.get([1, 1, 1].into()).imbalance().0, 0.0);
+    }
+
+    /// Checks two voxels: one bound to bedrock.
+    #[test]
+    fn boundb() {
+        use genawaiter::GeneratorState::*;
+        // 4x4x4
+        type Shape = ConstPow2Shape<2, 2, 2>;
+        let mut world = FlatPaddedGridCuboid::<StressVoxel, Shape>::new([0, 0, 0].into());
+        world.set([1, 1, 1].into(), StressVoxel::Bound).unwrap();
+        world.set([1, 1, 2].into(), StressVoxel::Bedrock).unwrap();
+
+        // For this algorithm, empty is ignored, and bedrock forces should too.
+        let weights = world.map(|v| Force(1.0));
+        let mut outforces = get_initial_forces(&world);
+
+        for i in 0..4 {
+            outforces = distribute(&world, &weights, &outforces);
+            let balance = process_newton_discrepancy(&outforces);
+            println!("i {} bound {}", i, balance.get([1, 1, 1].into()).imbalance().0);
+            println!("bedrock {}", balance.get([1, 1, 2].into()).imbalance().0);
+            println!("{:?}", outforces.get([1, 1, 1].into()));
+            println!("{:?}", outforces.get([1, 1, 2].into()));
+        }
+        
+        let balance = process_newton_discrepancy(&outforces);
+
+        let stresses = outforces.map(|sf| get_load_sum(sf));
+        assert_float_absolute_eq!(stresses.get([1, 1, 1].into()).0, 1.0);
+        // get_load_sum is unable to calculate stress on bedrock,
+        // because sum of forces will be negative
+        
+        // This should end up well balanced
+        assert_float_absolute_eq!(balance.get([1, 1, 1].into()).imbalance().0, 0.0);
+        assert_float_absolute_eq!(balance.get([1, 1, 2].into()).imbalance().0, 0.0);
     }
 }
