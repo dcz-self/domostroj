@@ -1,9 +1,48 @@
 /*! Stress analysis in voxel worlds.
  *
  * Gravity constant is 1.0, so is the unit area.
+ *
+ *
+ * ## Algorithm
+ *
+ * The algorithm calculates the static load in a system.
+ * Static means that the system is in equilibrium
+ * and the result applies to a single moment in time.
+ *
+ * Some assumptions for simplicity:
+ * - all forces act in the same direction
+ * - no torque
+ * - compression and stretching are equivalent
+ *
+ * This means the direction of gravity doesn't matter,
+ * and levers don't work.
+ *
+ * ### Forces
+ *
+ * Each voxel has outward forces acting on nieghbors.
+ * Those neighbors treat those same forces as inwards relative to them.
+ * 
+ * ### Bedrock
+ *
+ * Bedrock is a magical voxel type that limits the scope of our simulation
+ * by letting laws of physics (constants) break around it.
+ * Namely, its outward forces are always made to be equal to inward ones
+ * (it can take on any load).
+ * 
+ * ### Constants:
+ *
+ * Constants are preserved at each iteration of the calculation.
+ *
+ * 1. For each voxel, sum(outward forces) = weight
+ *
+ * ### Goals:
+ *
+ * Goals are not satisfied in the beginning, but hopely get closer with each iteration.
+ * 
+ * 1. For each voxel, sum(outward forces) = sum(inward forces)
  */
 
-use baustein::indices::Neighbours6;
+use baustein::indices::{Neighbours6, NamedNeighbours6};
 use baustein::traits::{ Extent, IterableSpace, Space };
 use baustein::world::FlatPaddedCuboid;
 use float_ord::FloatOrd;
@@ -23,10 +62,24 @@ impl Mass {
 #[derive(Clone, Copy, Default)]
 pub struct Force(f32);
 
+impl ops::Neg for Force {
+    type Output = Force;
+    fn neg(self) -> Force {
+        Force(-self.0)
+    }
+}
+
 impl ops::Add<Force> for Force {
     type Output = Force;
     fn add(self, other: Force) -> Force {
         Force(self.0 + other.0)
+    }
+}
+
+impl ops::Sub<Force> for Force {
+    type Output = Force;
+    fn sub(self, other: Force) -> Force {
+        Force(self.0 - other.0)
     }
 }
 
@@ -92,23 +145,6 @@ impl ThreeForces {
     }
 }
 
-/// Creates the initial internal force distribution.
-/// Forces are the initial unbalanced forces acting on each voxel in separation,
-/// like gravity.
-/// Both spaces must cover the same area.
-fn get_initial_forces<FS, VS>(forces: &FS, voxels: &VS) -> FlatPaddedCuboid<SixForces>
-    where
-    FS: Space<Voxel=Force> + Extent + IterableSpace,
-    VS: Space<Voxel=StressVoxel> + Extent + IterableSpace,
-{
-    let sf = voxels.map(|_sv| SixForces::default());
-    voxels
-        .zip(forces)
-        .zip(&sf)
-        .map_index(|i, v| voxel::distribute_forces(voxels, i, v))
-        .into()
-}
-
 fn process_newton_discrepancy<S>(space: &S)
     -> FlatPaddedCuboid<ThreeForces>
 where S: Space<Voxel=SixForces> + Extent + IterableSpace
@@ -142,69 +178,139 @@ fn get_newton_global_loss<S>(space: &S) -> f32
         });
     sum
 }
-    
-fn distribute<FS, BS, VS>(space: &VS, balance: &BS, forces: &FS)
+
+/// Initializes the outwardly forces array.
+/// Just sets it to 0, bounded by the voxel storage.
+/// This function exists for convenience only.
+fn get_initial_forces<S>(voxels: &S) -> FlatPaddedCuboid<SixForces>
+    where
+    S: Space<Voxel=StressVoxel> + Extent + IterableSpace,
+{
+    voxels.map(|_sv| SixForces::default()).into()
+}
+
+/// The main step of the solver.
+/// `weights` is the space with unchanging weight forces acting on voxels.
+/// `forces` contains the current estimate of forces acting between voxels.
+/// The return value is the next estimate of forces between voxels.
+fn distribute<FS, WS, VS>(space: &VS, weights: &WS, forces: &FS)
     -> FlatPaddedCuboid<SixForces>
 where
     FS: Space<Voxel=SixForces> + Extent + IterableSpace,
     VS: Space<Voxel=StressVoxel> + Extent + IterableSpace,
-    BS: Space<Voxel=ThreeForces> + Extent + IterableSpace,
+    WS: Space<Voxel=Force> + Extent + IterableSpace,
 {
-    let b = balance.map(|tf| tf.imbalance());
+    let outward = space.zip(forces);
     space
-        .zip(&b)
-        .zip(forces)
-        .map_index(|i, v| voxel::distribute_forces(space, i, v))
+        .zip(weights)
+        .map_index(|i, v| voxel::distribute_forces(&outward, i, v))
         .into()
 }
 
-fn solve<'a, SF, SV>(external_forces: &'a SF, space: &'a SV)
-    -> impl Generator<Yield=(f32, FlatPaddedCuboid<Force>)> + 'a
+/// Convenience function for calculating how far from reaching the goal we are.
+fn calculate_loss<FS>(forces: &FS) -> f32
+    where FS: Space<Voxel=SixForces> + Extent + IterableSpace
+{
+    let balance = process_newton_discrepancy(&forces);
+    get_newton_global_loss(&balance)
+}
+
+/// An example application of the solver.
+/// Probably not the best idea to actually use it,
+/// because it doesn't ofer a way out if there's no convergence.
+///
+/// Returns the magnitude of internal stresses for each voxel.
+/// This must act on a continuous block,
+/// and that block must be attached to a Bedrock.
+/// Detached pieces will carry nonsense results:
+/// 1x1x1 contributes 0 loss and experiences 0 strain,
+/// while bigger ones contributes to loss but carries no strain.
+fn solve<'a, SF, SV>(weights: &'a SF, space: &'a SV, threshold: f32)
+    -> FlatPaddedCuboid<Force>
 where
     SF: Space<Voxel=Force> + Extent + IterableSpace,
     SV: Space<Voxel=StressVoxel> + Extent + IterableSpace,
 {
-    gen!({
-        let mut sixforces = get_initial_forces(external_forces, space);
-        loop {
-            let balance = process_newton_discrepancy(&sixforces);
-            // TODO: return loss, sixforces. Let caller decide if they need the loads
-            yield_!((
-                get_newton_global_loss(&balance),
-                sixforces.map(|sf| get_load_sum(sf)).into()
-            ));
-            sixforces = distribute(space, &balance, &sixforces);
+    let mut forces = get_initial_forces(space);
+    // forces are zeroed at this stage.
+    loop {
+        // Insert some values into forces
+        forces = distribute(space, &weights, &forces);
+        // Optional check for quality of the result.
+        // Does not need to be done on each loop,
+        // but it's needed to stop.
+        {
+            // Overall divergence from Newton's laws. Closer to 0 is better.
+            let overall = calculate_loss(&forces);
+            if overall < threshold {
+                return forces.map(|sf| get_load_sum(sf)).into()
+            }
         }
-    })
+    }
 }
 
 /// That which applies voxel-wise.
 mod voxel {
-    use baustein::indices::{Index, Neighbours6};
+    use baustein::indices::{Index, NamedNeighbours6, Neighbours6};
     use baustein::traits::Space;
+    use std::cmp;
     use super::StressVoxel;
     use super::{Force, SixForces, ThreeForces};
 
-    /// Distribute unbalances forces.
-    /// Spreads discrepancies across neighbors.
-    /// Hopefully, this converges.
-    pub fn distribute_forces<S: Space<Voxel=StressVoxel>>(
+    /// Breaks constant 1. to reach goal 1. immediately.
+    /// This is a middle-of-the-way calculation
+    fn counteract_inwards_forces<S: Space<Voxel=SixForces>>(
+        s: S,
+        index: Index,
+    ) -> NamedNeighbours6<Force> {
+        let nbs = index.neighbours6();
+        
+        NamedNeighbours6{
+            xp: -s.get(nbs.xp()).xm(),
+            xm: -s.get(nbs.xm()).xp(),
+            yp: -s.get(nbs.yp()).ym(),
+            ym: -s.get(nbs.ym()).yp(),
+            zp: -s.get(nbs.zp()).zm(),
+            zm: -s.get(nbs.zm()).zp(),
+        }
+    }
+
+    /// Preserves outwardly forces balance (constant 1.)
+    /// by adjusting forces to each neighbour by the same magnitude (not fraction).
+    fn preserve_internal_forces<S: Space<Voxel=(StressVoxel, SixForces)>>(
         space: S,
         index: Index,
-        v: ((StressVoxel, Force), SixForces),
+        v: ((StressVoxel, Force), NamedNeighbours6<Force>),
     ) -> SixForces {
-        let ((sv, force), sf) = v;
+        let ((sv, weight), outward) = v;
         use StressVoxel::*;
 
         match sv {
-            Empty | Bedrock => Default::default(),
+            // No material, no forces
+            Empty => Default::default(),
+            // Magical unphysical material, already matches goal 1.
+            // (from counteraction that just happened),
+            // its outwardly forces are defined by forces acting on it,
+            // so nothing to be done to preserve balance.
+            Bedrock => outward.into(),
+            // Make the total of outwardly forces to be equal to weight.
             Bound => {
-                let mut forces_ordered = sf.0;
-                let mut nbs = index.neighbours6().0.iter()
-                    .map(|i| space.get(*i))
+                let outward: Neighbours6<_> = outward.into();
+                let outward_sum = Force(
+                    outward.0.iter()
+                        .map(|f| f.0)
+                        .sum()
+                );
+                // How far from =weight are we? Redistribute that across neighbours.
+                let to_distribute = weight - outward_sum;
+
+                // This contains the result
+                let mut forces_ordered = outward.0;
+                let nbs = index.neighbours6().0.iter()
+                    .map(|i| space.get(*i).0)
                     // line up with slots for forces
                     .zip(forces_ordered.iter_mut())
-                    // consider only neighbors that can share forces on all sides for simplicity
+                    // Consider neighbors that can receive forces.
                     .filter(|(v, _force)| match v {
                         Bound | Bedrock => true,
                         Empty => false,
@@ -214,19 +320,46 @@ mod voxel {
                     .map(|(_v, force)| force)
                     .collect::<Vec<_>>();
                 // nbs now contains force slots from forces_ordered,
-                // one for each side neighboring a voxel that can take forces
-                let force_share = force.0 / nbs.len() as f32;
+                // one for each side neighboring a voxel that can take forces.
+
+                // Avoid division by 0, which would happen for lonely blocks.
+                // There's no reason to let those interfere, even if themselves can't be handled.
+                let neighbor_count = cmp::max(nbs.len(), 1);
+                let force_share = Force(to_distribute.0 / neighbor_count as f32);
+                // The neighbors contain forces from the previous step:
+                // balanced against inward forces.
+                // References forces_ordered array.
                 for neighbor in nbs {
-                    *neighbor = Force(force_share);
+                    *neighbor = *neighbor + force_share;
                 }
-                // all forces have been filled in, turn them into the sixforces array
+                // Now outward forces are not guaranteed
+                // to be balanced against inward ones,
+                // but guaranteed to sum up to weight.
                 Neighbours6(forces_ordered)
             },
             //Loose {mass, ..} | Bedrock{mass} => {},
             _ => todo!(),
         }
     }
+    
+    /// Distribute outwardly forces.
+    /// 1. Breaks constant 1. to reach goal 1. immediately
+    /// 2. Updates forces to restore constant 1.
+    /// Spreads discrepancies across neighbors.
+    /// Hopefully, this converges.
+    pub fn distribute_forces<S: Space<Voxel=(StressVoxel, SixForces)>>(
+        space: S,
+        index: Index,
+        v: (StressVoxel, Force),
+    ) -> SixForces {
+        let (sv, force) = v;
+        use StressVoxel::*;
 
+        let outwards = counteract_inwards_forces(space.map(|(_sv, sf)| sf), index);
+
+        preserve_internal_forces(space, index, ((sv, force), outwards))
+    }
+ 
     /// Sums up forces acting in the direction of gravity on each interface,
     /// showing how far from satisfying Newton's law we are (action = -reaction).
     pub fn get_newton_discrepancy<S: Space<Voxel=SixForces>>(
@@ -254,6 +387,17 @@ mod test {
     use baustein::world::FlatPaddedGridCuboid;
     use baustein::re::ConstPow2Shape;
     use std::pin::Pin;
+
+/*
+    struct Solver(FlatPaddedCuboid<SixForces>);
+
+    impl Solver {
+        fn new(space: &S) -> Self {
+            Self(get_initial_forces(space))
+        }
+        fn step(space: &S, weights: &S) -> FlatPaddedCuboid<SixForces> {
+        }
+    }*/
     
     /// Checks a single bedrock voxel
     #[test]
@@ -265,13 +409,35 @@ mod test {
         world.set([0, 0, 0].into(), StressVoxel::Bedrock).unwrap();
 
         // For this algorithm, empty is ignored, and bedrock forces should too.
-        let grav = world.map(|v| Force(1.0));
-        let mut solver = solve(&grav, &world);
-        let solver = Pin::new(&mut solver);
-        if let Yielded((loss, forces)) = solver.resume() {
-            println!("loss: {}", loss);
-            // Actually not sure what the force on bedrock should be
-            assert_eq!(forces.get([0, 0, 0].into()).0, 0.0);
-        };
+        let weights = world.map(|v| Force(1.0));
+        let mut solver = get_initial_forces(&world);
+
+        let outforces = distribute(&world, &weights, &solver);
+        
+        let balance = process_newton_discrepancy(&outforces);
+
+        // Bedrock may never be imbalanced
+        assert_eq!(balance.get([0, 0, 0].into()).imbalance().0, 0.0);
+    }
+
+    /// Checks a single bound voxel.
+    /// Actually, this will never work. the forces have nowhere to spread.
+    #[test]
+    fn bound1() {
+        use genawaiter::GeneratorState::*;
+        // 4x4x4
+        type Shape = ConstPow2Shape<2, 2, 2>;
+        let mut world = FlatPaddedGridCuboid::<StressVoxel, Shape>::new([0, 0, 0].into());
+        world.set([1, 1, 1].into(), StressVoxel::Bound).unwrap();
+
+        // For this algorithm, empty is ignored, and bedrock forces should too.
+        let weights = world.map(|v| Force(1.0));
+        let mut solver = get_initial_forces(&world);
+
+        let outforces = distribute(&world, &weights, &solver);
+        
+        let balance = process_newton_discrepancy(&outforces);
+
+        assert_eq!(balance.get([1, 1, 1].into()).imbalance().0, 0.0);
     }
 }
