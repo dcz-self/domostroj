@@ -10,7 +10,9 @@ use bevy::prelude::*;
 use block_mesh::ndshape::ConstShape3u32;
 use block_mesh::{greedy_quads, GreedyQuadsBuffer, MergeVoxel, RIGHT_HANDED_Y_UP_CONFIG, UnorientedQuad};
 use feldspar::bb::mesh::PosNormMesh;
-use feldspar::prelude::{ArrayMaterial, SdfVoxelPalette, VoxelType, VoxelTypeInfo, VoxelMaterial};
+use feldspar::prelude::{
+    spawn_array_material, ArrayMaterial, SdfVoxelPalette, VoxelRenderAssets, VoxelType, VoxelTypeInfo, VoxelMaterial,
+};
 use feldspar::renderer::create_voxel_mesh_bundle;
 use ndshape::ConstShape;
 
@@ -51,6 +53,17 @@ impl app::Plugin for Plugin {
                 },
             ]));
     }
+}
+
+pub struct RenderAssets(pub VoxelRenderAssets);
+
+pub fn on_finished_loading(
+    assets: Res<RenderAssets>,
+    mut commands: Commands,
+    mut array_materials: ResMut<Assets<ArrayMaterial>>,
+    mut textures: ResMut<Assets<Texture>>,
+) {
+    spawn_array_material::<MeshMaterial>(&assets.0, commands, array_materials, textures)
 }
 
 #[derive(Default)]

@@ -14,6 +14,7 @@ fn main() -> Result<(), ron::Error> {
     App::build()
         .add_plugin(EditorPlugin::new(config))
         .add_plugin(generate::CameraPlugin)
+        .add_plugin(generate::render::Plugin)
         .run();
 
     Ok(())
