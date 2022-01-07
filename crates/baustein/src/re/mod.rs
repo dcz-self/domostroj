@@ -17,3 +17,4 @@ pub trait ConstShape : ndshape::ConstShape<3, Coord=usize> {
 }
 
 impl<const X: usize, const Y: usize, const Z: usize> ConstShape for ConstPow2Shape<X, Y, Z> {}
+impl<const X: usize, const Y: usize, const Z: usize> ConstShape for ConstAnyShape<X, Y, Z> {}

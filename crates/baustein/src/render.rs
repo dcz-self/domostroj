@@ -16,7 +16,6 @@
 use bevy::app;
 use bevy::prelude::*;
 // Older version needed for block_mesh
-use block_mesh::ndshape::ConstShape3u32;
 use block_mesh::{greedy_quads, GreedyQuadsBuffer, MergeVoxel, RIGHT_HANDED_Y_UP_CONFIG, UnorientedQuad};
 use feldspar::bb::mesh::PosNormMesh;
 use feldspar::prelude::{
@@ -27,11 +26,12 @@ use ndshape::ConstShape;
 
 use crate::indices::{to_i32_arr, ChunkIndex};
 use crate::prefab::{ PaletteIdChunk, PaletteVoxel, World };
+use crate::re;
 use crate::traits::{IterableSpace, Space};
 use crate::world::{ Cow, View };
 
 
-type ViewShape = ConstShape3u32::<18, 18, 18>;
+type BlockMeshShape = block_mesh::ndshape::ConstShape3u32::<18, 18, 18>;
 
 /// Requires: `LoadingTexture` resource.
 pub struct Plugin;
@@ -144,7 +144,7 @@ pub fn generate_transformeshes(
     for (space, transform) in ts_spaces.iter() {
         let mut world = World::default();
         let mut overlay = Cow::new(&world);
-        let centered = View::<_, ndshape::ConstShape3u32<18, 18, 18>>::new(
+        let centered = View::<_, re::ConstAnyShape<18, 18, 18>>::new(
             space,
             [9, 9, 9].into(),
         );
@@ -161,7 +161,7 @@ pub fn generate_transformeshes(
         let changes = overlay.into_changes();
         changes.apply(&mut world);
         // Screw accuracy. Alien chunks can only be close to the middle.
-        let view = View::<_, ndshape::ConstShape3u32<18, 18, 18>>::new(
+        let view = View::<_, re::ConstAnyShape<18, 18, 18>>::new(
             &world,
             [-9, -9, -9].into(),
         );
@@ -195,7 +195,7 @@ fn generate_greedy_buffer<V, S, Shape>(
     where
     V: MergeVoxel,
     S: Space<Voxel=V>,
-    Shape: ConstShape<3, Coord=u32>
+    Shape: re::ConstShape,
 {
     let samples = view.into_vec();
     let faces = RIGHT_HANDED_Y_UP_CONFIG.faces;
@@ -204,9 +204,13 @@ fn generate_greedy_buffer<V, S, Shape>(
 
     greedy_quads(
         &samples,
-        &ViewShape {},
+        &BlockMeshShape {},
         [0, 0, 0],
-        [Shape::ARRAY[0] - 1, Shape::ARRAY[1] - 1, Shape::ARRAY[2] - 1],
+        [
+            <Shape as re::ConstShape>::ARRAY[0] as u32 - 1,
+            <Shape as re::ConstShape>::ARRAY[1] as u32 - 1,
+            <Shape as re::ConstShape>::ARRAY[2] as u32 - 1,
+        ],
         &faces,
         &mut buffer,
     );
@@ -219,7 +223,7 @@ fn generate_mesh_for_chunk(
     index: ChunkIndex,
 ) -> Option<(PosNormMesh, Vec<[u8; 4]>)> {
     let view_offset = index.get_world_offset();
-    let view = View::<_, ndshape::ConstShape3u32<18, 18, 18>>::new(
+    let view = View::<_, re::ConstAnyShape<18, 18, 18>>::new(
         &world,
         view_offset,
     );
@@ -231,7 +235,7 @@ fn generate_mesh_for_chunk(
 
     greedy_quads(
         &samples,
-        &ViewShape {},
+        &BlockMeshShape {},
         [0, 0, 0],
         [17, 17, 17],
         &faces,

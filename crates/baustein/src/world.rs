@@ -106,7 +106,7 @@ pub struct View<'a, S, Shape> {
 impl<'a, Shape, S, V> Clone for View<'a, S, Shape>
     where
     S: Space<Voxel=V>,
-    Shape: ConstShape<3, Coord=u32> + ndshape::Shape<3, Coord=u32>,
+    Shape: re::ConstShape // + ndshape::Shape<3, Coord=u32>,
 {
     fn clone(&self) -> Self {
         Self::new(self.world.clone(), self.offset.clone())
@@ -116,7 +116,7 @@ impl<'a, Shape, S, V> Clone for View<'a, S, Shape>
 impl<'a, Shape, S, V> View<'a, S, Shape>
     where
         S: Space<Voxel=V>,
-        Shape: ConstShape<3, Coord=u32> + ndshape::Shape<3, Coord=u32>,
+        Shape: ConstShape<3, Coord=usize> + ndshape::Shape<3, Coord=usize>,
 {
     pub fn new(space: &'a S, offset: Index) -> Self {
         Self {
@@ -128,12 +128,12 @@ impl<'a, Shape, S, V> View<'a, S, Shape>
     pub fn into_vec(self) -> Vec<V> {
         (0..Shape::SIZE)
             .map(|i| <Shape as ConstShape<3>>::delinearize(i))
-            .map(|index| self.get(to_i32_arr(index).into()))
+            .map(|index| self.get(usize_to_i32_arr(index).into()))
             .collect()
     }
 
     pub fn opposite_corner(&self) -> Index {
-        self.offset + VoxelUnits(to_i32_arr(Shape::ARRAY).into())
+        self.offset + VoxelUnits(usize_to_i32_arr(Shape::ARRAY).into())
     }
 }
 
