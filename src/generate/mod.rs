@@ -1,6 +1,6 @@
 /*! Stuff related to the world generator and its UI.
  *
- Based on bevy example source */
+ Based on bevy example source. */
 use bevy::{
     prelude::*,
     render::{

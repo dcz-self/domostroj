@@ -8,7 +8,7 @@ use std::ops;
 // Traits
 use ndshape::ConstShape;
 
-pub(crate) fn to_i32_arr(a: [u32; 3]) -> [i32; 3] {
+pub fn to_i32_arr(a: [u32; 3]) -> [i32; 3] {
     [a[0] as i32, a[1] as i32, a[2] as i32]
 }
 

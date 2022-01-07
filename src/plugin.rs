@@ -1,4 +1,5 @@
 use crate::{
+    analyze,
     create_camera_entity,
     generate, open_voxel_database, save_map_to_db, BevyConfig, CameraConfig,
     CameraPlugin, Config, CursorPositionPlugin, EditToolsPlugin, ImmediateModePlugin,
@@ -141,6 +142,8 @@ impl Plugin for EditorPlugin {
                 SystemSet::on_update(EditorState::Editing)
                     .with_system(generate::spin_spinners.system())
             )
+            // Analyzer
+            .add_plugin(analyze::render::Plugin)
             ;
     }
 }

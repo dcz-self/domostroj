@@ -1,6 +1,8 @@
 #[cfg(test)]
 #[macro_use]
 extern crate assert_float_eq;
+
+mod analyze;
 mod camera;
 mod config;
 mod cursor_tracker;
@@ -11,7 +13,6 @@ mod geometry;
 mod immediate_mode;
 mod picking;
 mod plugin;
-//mod render;
 mod stress;
 
 use camera::{create_camera_entity, CameraPlugin, CursorRay};

@@ -1208,6 +1208,7 @@ dependencies = [
  "assert_float_eq",
  "baustein",
  "bevy",
+ "block-mesh",
  "env_logger 0.8.4",
  "feldspar",
  "float-ord",

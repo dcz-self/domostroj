@@ -218,6 +218,11 @@ impl<V: Default + Copy, Shape: ConstShape<3, Coord=usize>> FlatPaddedGridCuboid<
             Err(OutOfBounds)
         }
     }
+
+    /// Caution, samples are aligned according to the Shape.
+    pub fn get_samples(&self) -> &[V] {
+        self.data.as_ref()
+    }
 }
 
 impl<V, Shape> Space for FlatPaddedGridCuboid<V, Shape>

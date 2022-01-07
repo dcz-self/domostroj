@@ -28,6 +28,11 @@ version = "0.5"
 default-features = false
 features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"]
 
+[dependencies.block-mesh]
+git = "https://github.com/bonsairobo/block-mesh-rs"
+# branch = "main"
+rev = "e8a81d1"
+
 [dependencies.feldspar]
 git = "https://github.com/bonsairobo/feldspar"
 # branch = "main"
