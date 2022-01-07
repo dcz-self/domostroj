@@ -264,6 +264,19 @@ impl<V, Shape> Extent for FlatPaddedGridCuboid<V, Shape>
     }
 }
 
+impl<V, S, Shape> From<S> for FlatPaddedGridCuboid<V, Shape>
+    where
+    Shape: re::ConstShape,
+    V: Default + Copy,
+    S: Space<Voxel=V> + IterableSpace + Extent + IntoCuboid,
+{
+    fn from(space: S) -> Self {
+        let offset = space.get_offset();
+        Self::new_from_space(&space, offset)
+    }
+}
+
+
 /// Flat 3d array, out-of-bounds gives default voxel.
 /// This should be pretty fast, but not suitable for any large space.
 pub struct FlatPaddedCuboid<V> {

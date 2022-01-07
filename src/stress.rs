@@ -71,7 +71,7 @@ impl Mass {
 }
 
 #[derive(Clone, Copy, Default)]
-pub struct Force(f32);
+pub struct Force(pub f32);
 
 impl fmt::Debug for Force {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
@@ -145,7 +145,7 @@ fn get_stress(sf: SixForces) -> Stress {
 
 /// Same as get_load, but maybe a bit more accurate. Slower?
 /// Caution: doesn't work on objects of negative weight.
-fn get_stress_sum(sf: SixForces) -> Stress {
+pub fn get_stress_sum(sf: SixForces) -> Stress {
     Stress(
         sf.0.iter()
             .map(|f| f.0)
@@ -162,12 +162,12 @@ pub struct ThreeForces([Force; 3]);
 
 impl ThreeForces {
     /// The total unbalanced downwards force acting on the voxel.
-    fn imbalance(&self) -> Force {
+    pub fn imbalance(&self) -> Force {
         self.0[0] + self.0[1] + self.0[2]
     }
 }
 
-fn process_newton_discrepancy<S>(space: &S)
+pub fn process_newton_discrepancy<S>(space: &S)
     -> FlatPaddedCuboid<ThreeForces>
 where S: Space<Voxel=SixForces> + Extent + IterableSpace
 {
@@ -204,7 +204,7 @@ fn get_newton_global_loss<S>(space: &S) -> f32
 /// Initializes the outwardly forces array.
 /// Just sets it to 0, bounded by the voxel storage.
 /// This function exists for convenience only.
-fn get_initial_forces<S>(voxels: &S) -> FlatPaddedCuboid<SixForces>
+pub fn get_initial_forces<S>(voxels: &S) -> FlatPaddedCuboid<SixForces>
     where
     S: Space<Voxel=StressVoxel> + Extent + IterableSpace,
 {
@@ -215,7 +215,7 @@ fn get_initial_forces<S>(voxels: &S) -> FlatPaddedCuboid<SixForces>
 /// `weights` is the space with unchanging weight forces acting on voxels.
 /// `forces` contains the current estimate of forces acting between voxels.
 /// The return value is the next estimate of forces between voxels.
-fn distribute<FS, WS, VS>(space: &VS, weights: &WS, forces: &FS)
+pub fn distribute<FS, WS, VS>(space: &VS, weights: &WS, forces: &FS)
     -> FlatPaddedCuboid<SixForces>
 where
     FS: Space<Voxel=SixForces> + Extent + IterableSpace,
@@ -498,10 +498,9 @@ mod test {
         assert_float_absolute_eq!(balance.get([1, 1, 2].into()).imbalance().0, 0.0);
     }
 
-    /// Checks two voxels: one bound to bedrock.
+    /// Checks 3 voxels: one bound to bedrock.
     #[test]
     fn bound2b() {
-        use genawaiter::GeneratorState::*;
         // 4x4x4
         type Shape = ConstPow2Shape<2, 2, 2>;
         let mut world = FlatPaddedGridCuboid::<StressVoxel, Shape>::new([0, 0, 0].into());

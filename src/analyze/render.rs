@@ -85,7 +85,7 @@ impl From<Handle<ArrayMaterial>> for MeshMaterial {
 
 /// The value of stress.
 #[derive(Clone, Copy)]
-enum Voxel {
+pub enum Voxel {
     Empty,
     Stressed(f32),
 }
@@ -106,10 +106,10 @@ impl block_mesh::Voxel for Voxel {
     fn is_opaque(&self) -> bool { !self.is_empty() }
 }
 
-type StressChunk = FlatPaddedGridCuboid<Voxel, re::ConstAnyShape<18, 18, 18>>;
+pub type StressChunk = FlatPaddedGridCuboid<Voxel, re::ConstAnyShape<18, 18, 18>>;
 
 /// Contains analyzed data to visualize.
-pub struct Analyzed(StressChunk);
+pub struct Analyzed(pub StressChunk);
 
 /// To track which parts should be despawned and when
 pub struct StressMesh;
@@ -284,6 +284,7 @@ fn test_chunk() -> Analyzed {
     }
     Analyzed(chunk)
 }
+
 
 pub fn spawn_test_chunk(
     mut commands: Commands,
