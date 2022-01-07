@@ -7,6 +7,10 @@ pub use ndshape;
 pub type ConstPow2Shape<const X: usize, const Y: usize, const Z: usize>
     = ndshape::ConstPow2Shape3usize<X, Y, Z>;
 
+/// Using any other version of this is a bad idea.
+pub type ConstAnyShape<const X: usize, const Y: usize, const Z: usize>
+    = ndshape::ConstShape3usize<X, Y, Z>;
+
 /// Trait "reexport". No need for anything other then 3 and usize in baustein.
 pub trait ConstShape : ndshape::ConstShape<3, Coord=usize> {
     const ARRAY: [usize; 3] = <Self as ndshape::ConstShape<3>>::ARRAY;

@@ -15,6 +15,7 @@
  * */
 use bevy::app;
 use bevy::prelude::*;
+// Older version needed for block_mesh
 use block_mesh::ndshape::ConstShape3u32;
 use block_mesh::{greedy_quads, GreedyQuadsBuffer, MergeVoxel, RIGHT_HANDED_Y_UP_CONFIG, UnorientedQuad};
 use feldspar::bb::mesh::PosNormMesh;
