@@ -4,7 +4,15 @@
  * and an inspiration for your own library.
  * Mesh generation is probably reuseable.
  *
- * TODO: which parts should end up in prefab? */
+ * TODO: which parts should end up in prefab?
+ *
+ * `feldspar::render` accepts an`ArrayMaterial` resource via `feldspar::renderer::create_voxel_mesh_bundle`,
+ * and creates a `SmoothVoxelPbrBundle`.
+ * 
+ * To create the `ArrayMaterial`, provide a `LoadingTexture` resource and add the plugin.
+ * When `State` reaches `Ready`, `ArrayMaterial` will be available as a resource.
+ *
+ * */
 use bevy::app;
 use bevy::prelude::*;
 use block_mesh::ndshape::ConstShape3u32;
@@ -24,7 +32,7 @@ use crate::world::{ Cow, View };
 
 type ViewShape = ConstShape3u32::<18, 18, 18>;
 
-
+/// Requires: `LoadingTexture` resource.
 pub struct Plugin;
 
 impl app::Plugin for Plugin {
@@ -51,21 +59,21 @@ impl app::Plugin for Plugin {
                     is_empty: false,
                     material: VoxelMaterial(3),
                 },
-            ]));
+            ]))
+            .add_system_set(
+                SystemSet::on_update(TextureState::Loading)
+                    .with_system(wait_for_assets_loaded.system()),
+            )
+            .add_system_set(
+                SystemSet::on_enter(TextureState::Ready)
+                    .with_system(on_finished_loading.system()),
+            );
     }
 }
 
-pub struct RenderAssets(pub VoxelRenderAssets);
 
-pub fn on_finished_loading(
-    assets: Res<RenderAssets>,
-    mut commands: Commands,
-    mut array_materials: ResMut<Assets<ArrayMaterial>>,
-    mut textures: ResMut<Assets<Texture>>,
-) {
-    spawn_array_material::<MeshMaterial>(&assets.0, commands, array_materials, textures)
-}
-
+/// Stores the material to be used for rendering.
+/// Get one from `spawn_array_material`.
 #[derive(Default)]
 pub struct MeshMaterial(pub Handle<ArrayMaterial>);
 
@@ -148,13 +156,11 @@ pub fn generate_transformeshes(
             let voxel = centered.get(index);
             let tf_index = transform.mul_vec3(index.into());
             if voxel != PaletteVoxel::EMPTY {
-                //dbg!(index);
                 overlay.set(tf_index.into(), voxel);
             }
         });
         let changes = overlay.into_changes();
         changes.apply(&mut world);
-        //dbg!(world.get([13, 10, 11].into()));
         // Screw accuracy. Alien chunks can only be close to the middle.
         let view = View::<_, ndshape::ConstShape3u32<18, 18, 18>>::new(
             &world,
@@ -182,7 +188,6 @@ pub fn generate_transformeshes(
                 ;
         }
     }
-    //panic!()
 }
 
 fn generate_greedy_buffer<V, S, Shape>(
@@ -289,4 +294,45 @@ fn to_material(palette: &SdfVoxelPalette, v: PaletteVoxel) -> [u8; 4] {
     let info = palette.get_voxel_type_info(VoxelType(v.0));
     materials[info.material.0 as usize] = 1;
     materials
+}
+
+
+/// All textures needed for this renderer
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+enum TextureState {
+    Loading,
+    Ready,
+}
+
+/// A unique type for a resource containing the texture handle for this module.
+pub struct LoadingTexture(Handle<Texture>);
+
+/// A unique type for the mesh texture with metadata.
+pub struct RenderAssets(pub VoxelRenderAssets);
+
+
+// From feldspar
+fn wait_for_assets_loaded(
+    mut commands: Commands,
+    loading_texture: Res<LoadingTexture>,
+    textures: Res<Assets<Texture>>,
+    mut state: ResMut<State<TextureState>>,
+) {
+    if textures.get(&loading_texture.0).is_some() {
+        commands.insert_resource(RenderAssets(VoxelRenderAssets {
+            mesh_base_color: loading_texture.0.clone(),
+            image_count: 4,
+        }));
+        state.set(TextureState::Ready).unwrap();
+    }
+}
+
+pub fn on_finished_loading(
+    assets: Res<RenderAssets>,
+    mut commands: Commands,
+    mut array_materials: ResMut<Assets<ArrayMaterial>>,
+    mut textures: ResMut<Assets<Texture>>,
+) {
+    // TODO: move to wait and eliminate RenderAssets
+    spawn_array_material::<MeshMaterial>(&assets.0, commands, array_materials, textures)
 }
