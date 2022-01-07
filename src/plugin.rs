@@ -144,6 +144,10 @@ impl Plugin for EditorPlugin {
             )
             // Analyzer
             .add_plugin(analyze::render::Plugin)
+            .add_system_set(
+                SystemSet::on_enter(EditorState::Editing)
+                    .with_system(analyze::render::spawn_test_chunk.system())
+            )
             ;
     }
 }

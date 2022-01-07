@@ -63,6 +63,10 @@ impl app::Plugin for Plugin {
                 SystemSet::on_update(TextureState::Loading)
                     .with_system(wait_for_assets_loaded.system()),
             )
+            .add_system_set(
+                SystemSet::on_update(TextureState::Ready)
+                    .with_system(update_meshes.system()),
+            )
             ;
     }
 }
@@ -110,13 +114,14 @@ pub struct Analyzed(StressChunk);
 /// To track which parts should be despawned and when
 pub struct StressMesh;
 
-pub fn generate_meshes(
+pub fn update_meshes(
     mut commands: Commands,
     mesh_material: Res<MeshMaterial>,
     spaces: Query<(&Analyzed, &Transform)>,
     mut meshes: ResMut<Assets<Mesh>>,
     chunk_meshes: Query<Entity, With<StressMesh>>,
 ) {
+    println!("aaa");
     // Get rid of all meshes
     for cm in chunk_meshes.iter() {
         commands.entity(cm).despawn()
@@ -266,3 +271,25 @@ fn wait_for_assets_loaded(
         state.set(TextureState::Ready).unwrap();
     }
 }
+
+
+fn test_chunk() -> Analyzed {
+    let mut chunk = StressChunk::new([0, 0, 0].into());
+    for x in 0..5 {
+        for y in 0..2 {
+            for z in 0..3 {
+                chunk.set([x + 9, y + 9, z + 9].into(), Voxel::Stressed(x as f32 * 50.0)).unwrap();
+            }
+        }
+    }
+    Analyzed(chunk)
+}
+
+pub fn spawn_test_chunk(
+    mut commands: Commands,
+) {
+    commands.spawn()
+        .insert(test_chunk())
+        .insert(Transform::default());
+}
+
