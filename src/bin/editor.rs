@@ -1,6 +1,6 @@
+use bevy::app::prelude::*;
 use domostroj::{generate, Config, EditorPlugin};
 
-use bevy::app::prelude::*;
 
 fn main() -> Result<(), ron::Error> {
     env_logger::Builder::from_default_env()
@@ -14,7 +14,6 @@ fn main() -> Result<(), ron::Error> {
     App::build()
         .add_plugin(EditorPlugin::new(config))
         .add_plugin(generate::CameraPlugin)
-        .add_plugin(generate::render::Plugin)
         .run();
 
     Ok(())

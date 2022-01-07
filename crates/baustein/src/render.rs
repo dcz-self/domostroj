@@ -60,14 +60,12 @@ impl app::Plugin for Plugin {
                     material: VoxelMaterial(3),
                 },
             ]))
+            .add_state(TextureState::Loading)
             .add_system_set(
                 SystemSet::on_update(TextureState::Loading)
                     .with_system(wait_for_assets_loaded.system()),
             )
-            .add_system_set(
-                SystemSet::on_enter(TextureState::Ready)
-                    .with_system(on_finished_loading.system()),
-            );
+            ;
     }
 }
 
@@ -296,43 +294,29 @@ fn to_material(palette: &SdfVoxelPalette, v: PaletteVoxel) -> [u8; 4] {
     materials
 }
 
-
-/// All textures needed for this renderer
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
-enum TextureState {
+pub enum TextureState {
     Loading,
     Ready,
 }
 
 /// A unique type for a resource containing the texture handle for this module.
-pub struct LoadingTexture(Handle<Texture>);
-
-/// A unique type for the mesh texture with metadata.
-pub struct RenderAssets(pub VoxelRenderAssets);
-
+pub struct LoadingTexture(pub Handle<Texture>);
 
 // From feldspar
 fn wait_for_assets_loaded(
     mut commands: Commands,
     loading_texture: Res<LoadingTexture>,
-    textures: Res<Assets<Texture>>,
+    mut textures: ResMut<Assets<Texture>>,
+    mut array_materials: ResMut<Assets<ArrayMaterial>>,
     mut state: ResMut<State<TextureState>>,
 ) {
     if textures.get(&loading_texture.0).is_some() {
-        commands.insert_resource(RenderAssets(VoxelRenderAssets {
+        let params = VoxelRenderAssets {
             mesh_base_color: loading_texture.0.clone(),
             image_count: 4,
-        }));
+        };
+        spawn_array_material::<MeshMaterial>(&params, commands, array_materials, textures);
         state.set(TextureState::Ready).unwrap();
     }
-}
-
-pub fn on_finished_loading(
-    assets: Res<RenderAssets>,
-    mut commands: Commands,
-    mut array_materials: ResMut<Assets<ArrayMaterial>>,
-    mut textures: ResMut<Assets<Texture>>,
-) {
-    // TODO: move to wait and eliminate RenderAssets
-    spawn_array_material::<MeshMaterial>(&assets.0, commands, array_materials, textures)
 }

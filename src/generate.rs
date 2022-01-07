@@ -302,60 +302,9 @@ pub mod stress {
     }
 }
 
-pub mod render {
-    use baustein::render::{ RenderAssets, on_finished_loading };
-    use bevy::app;
-    use bevy::{
-        prelude::*,
-    };
-    use feldspar::prelude::{
-        spawn_array_material, ArrayMaterial, SdfVoxelPalette, VoxelRenderAssets, VoxelType, VoxelTypeInfo, VoxelMaterial,
-    };
 
-    use crate::EditorState;
-        
-    struct LoadingTexture(Handle<Texture>);
-
-    fn start_loading_render_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
-        commands.insert_resource(LoadingTexture(
-            asset_server.load("grass_rock_snow_dirt/base_color.png"),
-        ));
-    }
-
-    fn wait_for_assets_loaded(
-        mut commands: Commands,
-        loading_texture: Res<LoadingTexture>,
-        textures: Res<Assets<Texture>>,
-        mut state: ResMut<State<EditorState>>,
-    ) {
-        if textures.get(&loading_texture.0).is_some() {
-            log::info!("Done loading mesh texture");
-            commands.insert_resource(RenderAssets(VoxelRenderAssets {
-                mesh_base_color: loading_texture.0.clone(),
-                image_count: 4,
-            }));
-            // TODO: change to state resources loaded
-            //state.set(EditorState::Editing).unwrap();
-        }
-    }
-
-    pub struct Plugin;
-
-    impl app::Plugin for Plugin {
-        fn build(&self, app: &mut AppBuilder) {
-            app
-                .add_system_set(
-                    SystemSet::on_enter(EditorState::Loading)
-                        .with_system(start_loading_render_assets.system()),
-                )
-                .add_system_set(
-                    SystemSet::on_update(EditorState::Loading)
-                        .with_system(wait_for_assets_loaded.system()),
-                )
-                .add_system_set(
-                    SystemSet::on_enter(EditorState::Editing)
-                        .with_system(on_finished_loading.system()),
-                );
-        }
-    }
+pub fn start_loading_render_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.insert_resource(baustein::render::LoadingTexture(
+        asset_server.load("grass_rock_snow_dirt/base_color.png"),
+    ));
 }

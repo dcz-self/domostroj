@@ -122,6 +122,10 @@ impl Plugin for EditorPlugin {
             )
             // Generator
             //.insert_resource(generate::test_world())
+            .add_system_set(
+                SystemSet::on_enter(baustein::render::TextureState::Loading)
+                    .with_system(generate::start_loading_render_assets.system()),
+            )
             .add_plugin(baustein::render::Plugin)
             .add_system_set(
                 SystemSet::on_update(EditorState::Editing)
