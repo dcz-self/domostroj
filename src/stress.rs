@@ -247,7 +247,7 @@ fn calculate_loss<FS>(forces: &FS) -> f32
 /// Detached pieces will carry nonsense results:
 /// 1x1x1 contributes 0 loss and experiences 0 strain,
 /// while bigger ones contributes to loss but carries no strain.
-fn solve<'a, SF, SV>(weights: &'a SF, space: &'a SV, threshold: f32)
+pub fn solve<'a, SF, SV>(weights: &'a SF, space: &'a SV, threshold: f32)
     -> FlatPaddedCuboid<Stress>
 where
     SF: Space<Voxel=Force> + Extent + IterableSpace,

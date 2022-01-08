@@ -14,7 +14,7 @@ use block_mesh;
 use block_mesh::{visible_block_faces, UnitQuadBuffer, MergeVoxel, RIGHT_HANDED_Y_UP_CONFIG, UnorientedUnitQuad};
 use feldspar::bb::mesh::PosNormMesh;
 use feldspar::prelude::{
-    spawn_array_material, ArrayMaterial, SdfVoxelPalette, VoxelRenderAssets, VoxelType, VoxelTypeInfo, VoxelMaterial,
+    spawn_array_material, ArrayMaterial, VoxelRenderAssets, VoxelType, VoxelTypeInfo, VoxelMaterial,
 };
 use feldspar::renderer::create_voxel_mesh_bundle;
 use float_ord::FloatOrd;
@@ -32,28 +32,6 @@ pub struct Plugin;
 impl app::Plugin for Plugin {
     fn build(&self, app: &mut AppBuilder) {
         app
-            .insert_resource(SdfVoxelPalette::new(vec![
-                VoxelTypeInfo {
-                    is_empty: true,
-                    material: VoxelMaterial::NULL,
-                },
-                VoxelTypeInfo {
-                    is_empty: false,
-                    material: VoxelMaterial(0),
-                },
-                VoxelTypeInfo {
-                    is_empty: false,
-                    material: VoxelMaterial(1),
-                },
-                VoxelTypeInfo {
-                    is_empty: false,
-                    material: VoxelMaterial(2),
-                },
-                VoxelTypeInfo {
-                    is_empty: false,
-                    material: VoxelMaterial(3),
-                },
-            ]))
             .add_state(TextureState::Loading)
             .add_system_set(
                 SystemSet::on_enter(TextureState::Loading)

@@ -1,11 +1,3 @@
-use crate::{
-    analyze,
-    create_camera_entity,
-    generate, open_voxel_database, save_map_to_db, BevyConfig, CameraConfig,
-    CameraPlugin, Config, CursorPositionPlugin, EditToolsPlugin, ImmediateModePlugin,
-    VoxelPickingPlugin,
-};
-
 use bevy::{
     app::{prelude::*, PluginGroupBuilder},
     asset::{prelude::*, AssetPlugin},
@@ -24,7 +16,16 @@ use bevy_egui::EguiPlugin;
 use feldspar::{
     bb::core::prelude::*,
     bb::storage::prelude::*,
-    prelude::{VoxelEditor, VoxelRenderAssets, VoxelType, VoxelWorldPlugin},
+    prelude::{VoxelEditor, VoxelRenderAssets, VoxelRenderPlugin, VoxelType, VoxelWorldPlugin},
+};
+
+use crate::{
+    analyze,
+    create_camera_entity,
+    edit,
+    generate, open_voxel_database, save_map_to_db, BevyConfig, CameraConfig,
+    CameraPlugin, Config, CursorPositionPlugin, ImmediateModePlugin,
+    VoxelPickingPlugin,
 };
 
 
@@ -92,16 +93,20 @@ impl Plugin for EditorPlugin {
             .add_plugins(BevyPlugins::new(self.config.bevy))
             // Editor stuff.
             .insert_resource(self.config.clone())
-            .add_plugin(VoxelWorldPlugin::new(
-                self.config.feldspar,
+            // Workaround. Something still needs it, no idea what does.
+            .insert_resource(feldspar::bvt::VoxelBvt::default())
+
+            // Provides the rendering pipeline for MeshAssets
+            .add_plugin(feldspar::renderer::VoxelRenderPlugin::new(
                 EditorState::Editing,
+                self.config.feldspar.render,
             ))
+            
             .add_plugin(CursorPositionPlugin)
             .add_plugin(ImmediateModePlugin)
             .add_plugin(CameraPlugin)
             .add_plugin(EguiPlugin)
             .add_plugin(VoxelPickingPlugin)
-            .add_plugin(EditToolsPlugin::new(self.config.feldspar.map.chunk_shape()))
             .add_state(EditorState::Loading)
             // Load assets.
             .add_system_set(
@@ -115,24 +120,23 @@ impl Plugin for EditorPlugin {
             // Initialize entities.
             .add_system_set(
                 SystemSet::on_enter(EditorState::Editing)
-                    .with_system(open_voxel_database.system().label("load_chunks"))
                     .with_system(initialize_editor.system().after("load_chunks")),
             )
-            // Save the map to our database
-            // TODO: this should happen in veldspar proper as edits are made
+            // Common to editor and generator
+            .add_plugin(baustein::render::Plugin)
+            // Editor
+            .insert_resource(edit::floor())
             .add_system_set(
-                SystemSet::on_update(EditorState::Editing).with_system(save_map_to_db.system()),
+                SystemSet::on_update(EditorState::Editing)
+                    .with_system(edit::update_meshes.system())
             )
             // Generator
-            //.insert_resource(generate::test_world())
             .add_system_set(
                 SystemSet::on_enter(baustein::render::TextureState::Loading)
                     .with_system(generate::start_loading_render_assets.system()),
             )
-            .add_plugin(baustein::render::Plugin)
             .add_system_set(
                 SystemSet::on_update(EditorState::Editing)
-                    //.with_system(baustein::render::generate_meshes.system())
                     .with_system(baustein::render::generate_transformeshes.system())
             )
             // Spinny alien chunk test
@@ -186,15 +190,7 @@ fn wait_for_assets_loaded(
     }
 }
 
-fn initialize_editor(mut commands: Commands, mut voxel_editor: VoxelEditor, config: Res<Config>) {
-    // TODO: remove this once we can create voxels out of thin air
-    log::info!("Initializing voxels");
-    let write_extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([64, 2, 64]));
-    voxel_editor.edit_extent_and_touch_neighbors(write_extent, |_p, (voxel_type, dist)| {
-        *voxel_type = VoxelType(2);
-        *dist = Sd8::from(-10.0);
-    });
-
+fn initialize_editor(mut commands: Commands, config: Res<Config>) {
     create_lights(&mut commands);
     initialize_camera(&mut commands, config.camera);
 }
