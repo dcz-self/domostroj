@@ -125,11 +125,11 @@ impl Plugin for EditorPlugin {
             // Common to editor and generator
             .add_plugin(baustein::render::Plugin)
             // Editor
-            .insert_resource(edit::floor())
             .add_system_set(
                 SystemSet::on_update(EditorState::Editing)
                     .with_system(edit::update_meshes.system())
             )
+            .add_plugin(edit::Plugin)
             // Generator
             .add_system_set(
                 SystemSet::on_enter(baustein::render::TextureState::Loading)

@@ -1,14 +1,22 @@
 /*! Edit mode:
  * world, rendering, UI. */
+
+//mod ui;
+mod slice;
+
+use crate::EditorState;
+ 
 use baustein::indices::to_i32_arr;
 use baustein::prefab::PaletteVoxel;
 use baustein::re::{ ConstPow2Shape, ConstShape };
 use baustein::render::{ mesh_from_quads, MeshMaterial };
 use baustein::traits::Space;
 use baustein::world::FlatPaddedGridCuboid;
+use bevy::app::AppBuilder;
 use bevy::asset::Assets;
 use bevy::ecs::entity::Entity;
 use bevy::ecs::query::With;
+use bevy::ecs::schedule::SystemSet;
 use bevy::ecs::system::{ Commands, Query, Res, ResMut };
 use bevy::render::mesh::Mesh;
 use bevy::transform::components::Transform;
@@ -18,6 +26,7 @@ use feldspar::prelude::create_voxel_mesh_bundle;
 
 
 use baustein::traits::Extent;
+use bevy::prelude::IntoSystem;
 
 
 /// A wrapper over a mundane chunk, for the purpose of becoming the Bevy resource.
@@ -107,3 +116,48 @@ fn generate_greedy_buffer_fast<V, Shape>(
     );
     buffer
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum CurrentTool {
+    DragFace,//(DragFaceState),
+    Terraform,
+    Slice,
+}
+
+
+/// Depends on the `VoxelPickingPlugin`.
+pub struct Plugin;
+
+impl bevy::app::Plugin for Plugin {
+    fn build(&self, app: &mut AppBuilder) {
+        app
+            .insert_resource(floor())
+            .insert_resource(CurrentTool::Slice)
+            .insert_resource(slice::State::default())
+            .insert_resource(slice::MeshCutoff::default())
+            .add_event::<slice::edit::Events>()
+//            .add_event::<DragFaceEvents>()
+//            .add_event::<SelectionEvents>()
+            .add_system_set(
+                SystemSet::on_enter(EditorState::Editing)
+                    .with_system(slice::setup_hint.system())
+            )
+            .add_system_set(
+                SystemSet::on_update(EditorState::Editing)
+//                    .with_system(undo_system.system())
+  //                  .with_system(tool_switcher_system.system())
+    //                .with_system(terraformer_system.system())
+      //              .with_system(terraformer_default_input_map.system())
+        //            .with_system(drag_face_tool_system.system())
+          //          .with_system(drag_face_default_input_map.system())
+                    .with_system(slice::user::change_level.system())
+                    .with_system(slice::user::switch_to_slicer.system())
+                    .with_system(slice::update_hint.system())
+                    .with_system(slice::set_render_slice.system())
+                    .with_system(slice::edit::update_state.system())
+                    .with_system(slice::edit::input_map.system())
+                    .with_system(slice::show_mesh_count.system())
+            );
+    }
+}
+
