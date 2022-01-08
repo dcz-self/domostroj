@@ -1,6 +1,10 @@
 /*! Stuff related to the world generator and its UI.
  *
  Based on bevy example source. */
+
+ use baustein::prefab::{ PaletteIdChunk, PaletteVoxel, World };
+use baustein::world::Cow;
+
 use bevy::{
     prelude::*,
     render::{
@@ -15,8 +19,7 @@ use bevy::{
     window::{CreateWindow, WindowDescriptor, WindowId},
 };
 
-use baustein::prefab::{ PaletteIdChunk, PaletteVoxel, World };
-use baustein::world::Cow;
+//use bevy_egui;
 
 // used traits
 use baustein::traits::MutChunk;
@@ -66,6 +69,15 @@ fn setup_window(
     app_state.set(AppState::Setup).unwrap();
 }
 
+mod window {
+    pub const SWAP_CHAIN: &str = "generator_swap_chain";
+    pub const DEPTH_TEXTURE: &str = "generator_depth_texture";
+    pub const CAMERA_NODE: &str = "generator_camera";
+    pub const CAMERA_NAME: &str = "Generator";
+    pub const SAMPLED_COLOR_ATTACHMENT: &str = "generator_multi_sampled_color_attachment";
+    pub const PASS: &str = "generator_window_pass";
+}
+
 fn setup_pipeline(
     mut commands: Commands,
     windows: Res<Windows>,
@@ -90,13 +102,13 @@ fn setup_pipeline(
 
     // add a swapchain node for our new window
     render_graph.add_node(
-        "second_window_swap_chain",
+        window::SWAP_CHAIN,
         WindowSwapChainNode::new(window_id),
     );
 
     // add a new depth texture node for our new window
     render_graph.add_node(
-        "second_window_depth_texture",
+        window::DEPTH_TEXTURE,
         WindowTextureNode::new(
             window_id,
             TextureDescriptor {
@@ -109,10 +121,13 @@ fn setup_pipeline(
     );
 
     // add a new camera node for our new window
-    render_graph.add_system_node("secondary_camera", CameraNode::new("Generator"));
+    render_graph.add_system_node(
+        window::CAMERA_NODE,
+        CameraNode::new(window::CAMERA_NAME),
+    );
 
     // add a new render pass for our new window / camera
-    let mut second_window_pass = PassNode::<&MainPass>::new(PassDescriptor {
+    let mut pass = PassNode::<&MainPass>::new(PassDescriptor {
         color_attachments: vec![msaa.color_attachment_descriptor(
             TextureAttachment::Input("color_attachment".to_string()),
             TextureAttachment::Input("color_resolve_target".to_string()),
@@ -132,16 +147,16 @@ fn setup_pipeline(
         sample_count: msaa.samples,
     });
 
-    second_window_pass.add_camera("Generator");
-    active_cameras.add("Generator");
+    pass.add_camera(window::CAMERA_NAME);
+    active_cameras.add(window::CAMERA_NAME);
 
-    render_graph.add_node("second_window_pass", second_window_pass);
+    render_graph.add_node(window::PASS, pass);
 
     render_graph
         .add_slot_edge(
-            "second_window_swap_chain",
+            window::SWAP_CHAIN,
             WindowSwapChainNode::OUT_TEXTURE,
-            "second_window_pass",
+            window::PASS,
             if msaa.samples > 1 {
                 "color_resolve_target"
             } else {
@@ -152,20 +167,20 @@ fn setup_pipeline(
 
     render_graph
         .add_slot_edge(
-            "second_window_depth_texture",
+            window::DEPTH_TEXTURE,
             WindowTextureNode::OUT_TEXTURE,
-            "second_window_pass",
+            window::PASS,
             "depth",
         )
         .unwrap();
 
     render_graph
-        .add_node_edge("secondary_camera", "second_window_pass")
+        .add_node_edge(window::CAMERA_NODE, window::PASS)
         .unwrap();
 
     if msaa.samples > 1 {
         render_graph.add_node(
-            "second_multi_sampled_color_attachment",
+            window::SAMPLED_COLOR_ATTACHMENT,
             WindowTextureNode::new(
                 window_id,
                 TextureDescriptor {
@@ -185,14 +200,28 @@ fn setup_pipeline(
 
         render_graph
             .add_slot_edge(
-                "second_multi_sampled_color_attachment",
+                window::SAMPLED_COLOR_ATTACHMENT,
                 WindowSwapChainNode::OUT_TEXTURE,
-                "second_window_pass",
+                window::PASS,
                 "color_attachment",
             )
             .unwrap();
     }
-
+/*
+    bevy_egui::setup_pipeline(
+        render_graph,
+        msaa,
+        bevy_egui::RenderGraphConfig {
+            window_id,
+            egui_pass: "egui_generator_pass",
+            main_pass: second_window::PASS,
+            swap_chain_node: second_window::SWAP_CHAIN,
+            depth_texture: second_window::DEPTH_TEXTURE,
+            sampled_color_attachment: second_window::SAMPLED_COLOR_ATTACHMENT,
+            transform_node: "egui_generator_transform",
+        },
+    );
+*/
     // SETUP SCENE
 
     // add entities to the world
@@ -203,7 +232,7 @@ fn setup_pipeline(
     commands
         .spawn_bundle(PerspectiveCameraBundle {
             camera: Camera {
-                name: Some("Generator".to_string()),
+                name: Some(window::CAMERA_NAME.to_string()),
                 window: window_id,
                 ..Default::default()
             },
