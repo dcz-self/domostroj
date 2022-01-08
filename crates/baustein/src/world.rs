@@ -210,8 +210,9 @@ impl<V: Default + Copy, Shape: ConstShape<3, Coord=usize>> FlatPaddedGridCuboid<
         true
     }
 
-    pub fn set(&mut self, offset: Index, value: V) -> Result<(), OutOfBounds> {
-        if self.contains(offset) {
+    pub fn set(&mut self, index: Index, value: V) -> Result<(), OutOfBounds> {
+        if self.contains(index) {
+            let offset = index - VoxelUnits(self.offset.0);
             self.data[Shape::linearize(to_usize_arr(offset.into()))] = value;
             Ok(())
         } else {
@@ -231,8 +232,9 @@ impl<V, Shape> Space for FlatPaddedGridCuboid<V, Shape>
     Shape: ConstShape<3, Coord=usize>,
 {
     type Voxel = V;
-    fn get(&self, offset: Index) -> Self::Voxel {
-        if self.contains(offset) {
+    fn get(&self, index: Index) -> Self::Voxel {
+        if self.contains(index) {
+            let offset = index - VoxelUnits(self.offset.0);
             self.data[Shape::linearize(to_usize_arr(offset.into()))]
         } else {
             Default::default()
@@ -400,6 +402,8 @@ impl<E, F> IntoCuboid for Zip<E, F>{}
 mod test {
     use super::*;
 
+    use crate::re::ConstPow2Shape;
+
     #[test]
     fn cow_apply_neg() {
         let world = World::default();
@@ -419,8 +423,22 @@ mod test {
         let changes = cow.into_changes();
         let mut world = world;
         changes.apply(&mut world);
-        let view = View::<_, ndshape::ConstShape3u32<2, 2, 2>>::new(&world, [-2, -2, -2].into());
+        let view = View::<_, ndshape::ConstShape3usize<2, 2, 2>>::new(&world, [-2, -2, -2].into());
         assert_eq!(view.get([1, 1, 1].into()), PaletteVoxel(1));
     }
-    
+
+    #[test]
+    fn copy_offset() {
+        type Cuboid<V> = FlatPaddedGridCuboid<V, ConstPow2Shape<5, 5, 5>>;
+        let extent = Cuboid::<()>::new([0, -10, 0].into());
+        let world = extent.map_index(|i, _| i.y() < 0);
+        let other: Cuboid<bool> = world.into();
+    }
+
+    #[test]
+    fn set_offset() {
+        type Cuboid<V> = FlatPaddedGridCuboid<V, ConstPow2Shape<5, 5, 5>>;
+        let mut extent = Cuboid::<bool>::new([0, -10, 0].into());
+        assert!(extent.set([0, -9, 0].into(), true).is_ok());
+    }
 }
