@@ -134,6 +134,7 @@ impl Plugin for EditorPlugin {
                     .with_system(baustein::render::generate_transformeshes.system())
             )
             // Spinny alien chunk test
+            /*
             .add_system_set(
                 SystemSet::on_enter(EditorState::Editing)
                     .with_system(generate::create_test_spinner.system())
@@ -141,12 +142,12 @@ impl Plugin for EditorPlugin {
             .add_system_set(
                 SystemSet::on_update(EditorState::Editing)
                     .with_system(generate::spin_spinners.system())
-            )
+            )*/
             // Analyzer
             .add_plugin(analyze::render::Plugin)
             .add_system_set(
                 SystemSet::on_enter(EditorState::Editing)
-                    .with_system(analyze::render::spawn_test_chunk.system())
+                    .with_system(analyze::spawn_test_chunk_2b.system())
             )
             ;
     }

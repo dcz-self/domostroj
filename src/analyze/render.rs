@@ -121,7 +121,6 @@ pub fn update_meshes(
     mut meshes: ResMut<Assets<Mesh>>,
     chunk_meshes: Query<Entity, With<StressMesh>>,
 ) {
-    println!("aaa");
     // Get rid of all meshes
     for cm in chunk_meshes.iter() {
         commands.entity(cm).despawn()
