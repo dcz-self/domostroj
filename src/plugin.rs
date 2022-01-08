@@ -6,12 +6,6 @@ use crate::{
     VoxelPickingPlugin,
 };
 
-use feldspar::{
-    bb::core::prelude::*,
-    bb::storage::prelude::*,
-    prelude::{VoxelEditor, VoxelRenderAssets, VoxelType, VoxelWorldPlugin},
-};
-
 use bevy::{
     app::{prelude::*, PluginGroupBuilder},
     asset::{prelude::*, AssetPlugin},
@@ -26,6 +20,13 @@ use bevy::{
     window::{WindowDescriptor, WindowPlugin},
     winit::WinitPlugin,
 };
+use bevy_egui::EguiPlugin;
+use feldspar::{
+    bb::core::prelude::*,
+    bb::storage::prelude::*,
+    prelude::{VoxelEditor, VoxelRenderAssets, VoxelType, VoxelWorldPlugin},
+};
+
 
 /// The first-party plugins that we need from Bevy.
 struct BevyPlugins {
@@ -98,6 +99,7 @@ impl Plugin for EditorPlugin {
             .add_plugin(CursorPositionPlugin)
             .add_plugin(ImmediateModePlugin)
             .add_plugin(CameraPlugin)
+            .add_plugin(EguiPlugin)
             .add_plugin(VoxelPickingPlugin)
             .add_plugin(EditToolsPlugin::new(self.config.feldspar.map.chunk_shape()))
             .add_state(EditorState::Loading)

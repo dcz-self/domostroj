@@ -2,7 +2,7 @@
  *
  Based on bevy example source. */
 
- use baustein::prefab::{ PaletteIdChunk, PaletteVoxel, World };
+use baustein::prefab::{ PaletteIdChunk, PaletteVoxel, World };
 use baustein::world::Cow;
 
 use bevy::{
@@ -19,13 +19,14 @@ use bevy::{
     window::{CreateWindow, WindowDescriptor, WindowId},
 };
 
-//use bevy_egui;
+use bevy_egui;
 
 // used traits
 use baustein::traits::MutChunk;
 
 
 /// This creates a second window with a different camera
+/// Requires: EguiPlugin
 pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
@@ -207,21 +208,21 @@ fn setup_pipeline(
             )
             .unwrap();
     }
-/*
+
     bevy_egui::setup_pipeline(
-        render_graph,
-        msaa,
+        &mut render_graph,
+        &msaa,
         bevy_egui::RenderGraphConfig {
             window_id,
             egui_pass: "egui_generator_pass",
-            main_pass: second_window::PASS,
-            swap_chain_node: second_window::SWAP_CHAIN,
-            depth_texture: second_window::DEPTH_TEXTURE,
-            sampled_color_attachment: second_window::SAMPLED_COLOR_ATTACHMENT,
+            main_pass: window::PASS,
+            swap_chain_node: window::SWAP_CHAIN,
+            depth_texture: window::DEPTH_TEXTURE,
+            sampled_color_attachment: window::SAMPLED_COLOR_ATTACHMENT,
             transform_node: "egui_generator_transform",
         },
     );
-*/
+
     // SETUP SCENE
 
     // add entities to the world

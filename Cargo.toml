@@ -15,6 +15,7 @@ release = { lto = "thin" }
 approx = "0.4"
 assert_float_eq = { path = "external/assert_float_eq" }
 baustein = { path = "crates/baustein" }
+bevy_egui = "0.9"
 env_logger = "0.8"
 futures = "0.3"
 float-ord = "0.3"
