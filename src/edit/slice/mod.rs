@@ -79,6 +79,7 @@ impl Default for State {
 /// The vertical index of the voxel,
 /// which should be replaced,
 /// and above which voxels should be made invisible.
+#[derive(Debug)]
 pub struct SliceHeight(pub i32);
 
 pub fn set_render_slice(

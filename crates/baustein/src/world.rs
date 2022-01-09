@@ -180,7 +180,7 @@ impl<V: Default + Copy, Shape: ConstShape<3, Coord=usize>> FlatPaddedGridCuboid<
     }
     /// Dimensions are determined by the compile-time Shape.
     /// Offset is the lowest point of this cuboid portion.
-    fn new_from_space<S: Space<Voxel=V>>(space: &S, offset: Index) -> Self {
+    pub fn new_from_space<S: Space<Voxel=V>>(space: &S, offset: Index) -> Self {
         let mut data = Vec::with_capacity(Shape::SIZE as usize);
         for i in 0..Shape::SIZE {
             let idx = <Shape as ConstShape<3>>::delinearize(i);

@@ -54,6 +54,7 @@ pub struct EditMesh;
 pub fn update_meshes(
     mut commands: Commands,
     mesh_material: Res<MeshMaterial>,
+    mesh_cutoff: Res<slice::MeshCutoff>,
     space: Res<World>,
     mut meshes: ResMut<Assets<Mesh>>,
     edit_meshes: Query<Entity, With<EditMesh>>,
@@ -64,15 +65,26 @@ pub fn update_meshes(
     }
     // And create the occupied ones again.
     // Wasteful, I know. I'm testing!
+
+    // The creation of this space can be optimized:
+    // create an extent that doesn't go above the offset.
+    // This is annoying, so it's skipped.
+    let mesh_cutoff = mesh_cutoff.0 as i32;
+    let space = space.0.map_index(|i, v| {
+        if i.y() < mesh_cutoff { v }
+        else { Default::default() }
+    });
+    type Shape = ConstPow2Shape<5, 5, 5>;
+    let space = FlatPaddedGridCuboid::<_, Shape>::new_from_space(&space, space.get_offset());
     
-    let quads = generate_greedy_buffer_fast(&space.0);
+    let quads = generate_greedy_buffer_fast(&space);
     let material_lookup = |quad: &UnorientedQuad| {
-        let i = space.0.get(to_i32_arr(quad.minimum).into()).0;
+        let i = space.get(to_i32_arr(quad.minimum).into()).0;
         let mut material = [0; 4];
         material[i as usize] = 1;
         [material, material, material, material]
     };
-    let mesh = mesh_from_quads(quads, &space.0, material_lookup);
+    let mesh = mesh_from_quads(quads, &space, material_lookup);
     if let Some((mesh, materials)) = mesh {
         commands
             .spawn_bundle(
@@ -83,7 +95,7 @@ pub fn update_meshes(
                     &mut meshes,
                 )
             )
-            .insert(Transform::from_translation(space.0.get_offset().into()))
+            .insert(Transform::from_translation(space.get_offset().into()))
             .insert(EditMesh)
             ;
     }
@@ -161,3 +173,8 @@ impl bevy::app::Plugin for Plugin {
     }
 }
 
+#[cfg(test)]
+mod test {
+    use super::*;
+
+}
