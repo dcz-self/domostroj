@@ -220,10 +220,20 @@ impl<V: Default + Copy, Shape: ConstShape<3, Coord=usize>> FlatPaddedGridCuboid<
             Err(OutOfBounds)
         }
     }
+}
 
+impl<V, Shape: ConstShape<3, Coord=usize>> FlatPaddedGridCuboid<V, Shape> {
     /// Caution, samples are aligned according to the Shape.
     pub fn get_samples(&self) -> &[V] {
         self.data.as_ref()
+    }
+
+    pub unsafe fn new_from_samples(samples: Vec<V>, offset: Index) -> Self {
+        Self {
+            data: samples,
+            offset,
+            shape: Default::default(),
+        }
     }
 }
 

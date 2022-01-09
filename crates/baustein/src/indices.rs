@@ -28,6 +28,9 @@ pub(crate) fn to_usize_arr(a: [i32; 3]) -> [usize; 3] {
     [a[0] as usize, a[1] as usize, a[2] as usize]
 }
 
+pub fn i64_to_i32_arr(a: [i64; 3]) -> [i32; 3] {
+    [a[0] as i32, a[1] as i32, a[2] as i32]
+}
 
 /// Delberately not public inside,
 /// to be able to replace it in the future with a chunk+voxel combo
@@ -78,6 +81,12 @@ impl ops::Index<usize> for WorldIndex {
 impl From<[i32; 3]> for WorldIndex {
     fn from(coords: [i32; 3]) -> Self {
         Self(coords.into())
+    }
+}
+
+impl From<[i64; 3]> for WorldIndex {
+    fn from(coords: [i64; 3]) -> Self {
+        Self(i64_to_i32_arr(coords).into())
     }
 }
 
