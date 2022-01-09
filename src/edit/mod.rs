@@ -58,12 +58,14 @@ pub fn handle_events(
     space: Res<World>,
     mut events: Res<Mutex<Receiver<Event>>>,
 ) {
-    let events = events.lock().unwrap();
-    for event in events.try_iter() {
-        use Event::*;
-        match event {
-            LoadFile(path) => {println!("Load")},
-            SaveFile(path) => {}//save(&space.0),
+    let events = events.try_lock();
+    if let Ok(events) = events {
+        for event in events.try_iter() {
+            use Event::*;
+            match event {
+                LoadFile(path) => {println!("Load")},
+                SaveFile(path) => {}//save(&space.0),
+            }
         }
     }
 }
