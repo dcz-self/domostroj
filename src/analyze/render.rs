@@ -233,10 +233,10 @@ fn start_loading_render_assets(mut commands: Commands, asset_server: Res<AssetSe
 
 // From feldspar
 fn wait_for_assets_loaded(
-    mut commands: Commands,
+    commands: Commands,
     loading_texture: Res<LoadingTexture>,
-    mut textures: ResMut<Assets<Texture>>,
-    mut array_materials: ResMut<Assets<ArrayMaterial>>,
+    textures: ResMut<Assets<Texture>>,
+    array_materials: ResMut<Assets<ArrayMaterial>>,
     mut state: ResMut<State<TextureState>>,
 ) {
     if textures.get(&loading_texture.0).is_some() {

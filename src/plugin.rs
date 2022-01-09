@@ -15,7 +15,6 @@ use bevy::{
 use bevy_egui::EguiPlugin;
 use feldspar::{
     bb::core::prelude::*,
-    bb::storage::prelude::*,
     prelude::{VoxelEditor, VoxelRenderAssets, VoxelRenderPlugin, VoxelType, VoxelWorldPlugin},
 };
 

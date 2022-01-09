@@ -27,7 +27,7 @@ use bevy::transform::components::Transform;
 use bevy::prelude::IntoSystem;
 
 
-type VoxelType = PaletteVoxel;
+pub type VoxelType = PaletteVoxel;
 
 const VOXEL_WIDTH: f32 = 1.0;
 /// How far the hint box should extend towards the bottom.
@@ -62,9 +62,10 @@ impl Default for MeshCutoff {
 pub struct SlicingHint;
 
 /// Sate of the plugin
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct State {
-    slice_height: SliceHeight,
-    voxel_type: VoxelType,
+    pub slice_height: SliceHeight,
+    pub voxel_type: VoxelType,
 }
 
 impl Default for State {
@@ -79,7 +80,7 @@ impl Default for State {
 /// The vertical index of the voxel,
 /// which should be replaced,
 /// and above which voxels should be made invisible.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SliceHeight(pub i32);
 
 pub fn set_render_slice(
@@ -96,7 +97,7 @@ pub fn set_render_slice(
 }
 
 
-fn find_cursor_voxel(
+pub fn find_cursor_voxel(
     cursor_ray: &CursorRay,
     slice_height: &SliceHeight,
 ) -> Option<Index> {

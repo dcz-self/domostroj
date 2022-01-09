@@ -1,7 +1,7 @@
 /*! Edit mode:
  * world, rendering, UI. */
 
-//mod ui;
+mod ui;
 mod slice;
 
 use crate::EditorState;
@@ -129,7 +129,7 @@ fn generate_greedy_buffer_fast<V, Shape>(
     buffer
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 pub enum CurrentTool {
     DragFace,//(DragFaceState),
     Terraform,
@@ -147,6 +147,7 @@ impl bevy::app::Plugin for Plugin {
             .insert_resource(CurrentTool::Slice)
             .insert_resource(slice::State::default())
             .insert_resource(slice::MeshCutoff::default())
+            .insert_resource(Option::<ui::VoxelInfo>::None)
             .add_event::<slice::edit::Events>()
 //            .add_event::<DragFaceEvents>()
 //            .add_event::<SelectionEvents>()
@@ -169,6 +170,8 @@ impl bevy::app::Plugin for Plugin {
                     .with_system(slice::edit::update_state.system())
                     .with_system(slice::edit::input_map.system())
                     .with_system(slice::show_mesh_count.system())
+                    .with_system(ui::process.system())
+                    .with_system(ui::update_voxel_info.system())
             );
     }
 }
