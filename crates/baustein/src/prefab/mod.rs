@@ -1,6 +1,7 @@
 /*! Prebult components that lose a lot of flexibility, but are useful for prototyping.
  * At some point you will want to build your own based on those. */
 mod feldspar;
+mod serialize;
 
 use block_mesh::{ MergeVoxel, Voxel };
 use feldspar_map::palette::PaletteId8;

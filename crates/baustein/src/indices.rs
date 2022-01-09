@@ -12,6 +12,10 @@ pub fn to_i32_arr(a: [u32; 3]) -> [i32; 3] {
     [a[0] as i32, a[1] as i32, a[2] as i32]
 }
 
+pub fn to_i64_arr(a: [i32; 3]) -> [i64; 3] {
+    [a[0] as i64, a[1] as i64, a[2] as i64]
+}
+
 pub(crate) fn usize_to_i32_arr(a: [usize; 3]) -> [i32; 3] {
     [a[0] as i32, a[1] as i32, a[2] as i32]
 }
@@ -92,6 +96,12 @@ impl From<Vec3> for WorldIndex {
 impl Into<[i32; 3]> for WorldIndex {
     fn into(self) -> [i32; 3] {
         self.0.into()
+    }
+}
+
+impl Into<[i64; 3]> for WorldIndex {
+    fn into(self) -> [i64; 3] {
+        to_i64_arr(self.0.into())
     }
 }
 
