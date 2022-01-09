@@ -1,7 +1,7 @@
 /*! Indexing facilities */
 use bevy::prelude::Vec3;
 use feldspar_core::glam::IVec3;
-use feldspar_map::units::{ChunkUnits, VoxelUnits};
+use feldspar_map;
 use ndshape;
 use std::ops;
 
@@ -32,14 +32,23 @@ pub fn i64_to_i32_arr(a: [i64; 3]) -> [i32; 3] {
     [a[0] as i32, a[1] as i32, a[2] as i32]
 }
 
+/// Ideally for relative indexing.
+pub struct VoxelUnits(pub [i32; 3]);
+
+impl Into<IVec3> for VoxelUnits {
+    fn into(self) -> IVec3 {
+        self.0.into()
+    }
+}
+
 /// Delberately not public inside,
 /// to be able to replace it in the future with a chunk+voxel combo
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct WorldIndex(pub IVec3);
 
 impl WorldIndex {
-    pub fn new(offset: VoxelUnits<IVec3>) -> Self {
-        Self(offset.0)
+    pub fn new(offset: VoxelUnits) -> Self {
+        Self(offset.0.into())
     }
 
     /// Returns the 6 neighbouring indices sharing a face.
@@ -126,17 +135,31 @@ impl Into<Vec3> for WorldIndex {
     }
 }
 
-impl ops::Sub<VoxelUnits<IVec3>> for WorldIndex {
+impl ops::Sub<VoxelUnits> for WorldIndex {
     type Output = WorldIndex;
-    fn sub(self, s: VoxelUnits<IVec3>) -> Self::Output {
-        WorldIndex(self.0 - s.0)
+    fn sub(self, s: VoxelUnits) -> Self::Output {
+        WorldIndex(self.0 - IVec3::from(s.0))
     }
 }
 
-impl ops::Add<VoxelUnits<IVec3>> for WorldIndex {
+impl ops::Add<VoxelUnits> for WorldIndex {
     type Output = WorldIndex;
-    fn add(self, s: VoxelUnits<IVec3>) -> Self::Output {
-        WorldIndex(self.0 + s.0)
+    fn add(self, s: VoxelUnits) -> Self::Output {
+        WorldIndex(self.0 + IVec3::from(s.0))
+    }
+}
+
+impl ops::Sub<feldspar_map::units::VoxelUnits<IVec3>> for WorldIndex {
+    type Output = WorldIndex;
+    fn sub(self, s: feldspar_map::units::VoxelUnits<IVec3>) -> Self::Output {
+        WorldIndex(self.0 - IVec3::from(s.0))
+    }
+}
+
+impl ops::Add<feldspar_map::units::VoxelUnits<IVec3>> for WorldIndex {
+    type Output = WorldIndex;
+    fn add(self, s: feldspar_map::units::VoxelUnits<IVec3>) -> Self::Output {
+        WorldIndex(self.0 + IVec3::from(s.0))
     }
 }
 
@@ -175,8 +198,8 @@ impl ChunkIndex {
     }
 
     /// Offset relative to the beginning of the chunk.
-    pub fn get_internal_offset(&self, index: WorldIndex) -> VoxelUnits<IVec3> {
-        VoxelUnits(index.0 - Self::new_encompassing(index).0)
+    pub fn get_internal_offset(&self, index: WorldIndex) -> VoxelUnits {
+        VoxelUnits((index.0 - Self::new_encompassing(index).0).into())
     }
 }
 
