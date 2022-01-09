@@ -85,7 +85,7 @@ impl From<IVec3> for WorldIndex {
 
 impl From<Vec3> for WorldIndex {
     fn from(coords: Vec3) -> Self {
-        [coords.x as i32, coords.y as i32, coords.z as i32].into()
+        [coords.x.round() as i32, coords.y.round() as i32, coords.z.round() as i32].into()
     }
 }
 
