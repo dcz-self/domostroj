@@ -20,11 +20,13 @@ use bevy::ecs::schedule::SystemSet;
 use bevy::ecs::system::{ Commands, Query, Res, ResMut };
 use bevy::render::mesh::Mesh;
 use bevy::transform::components::Transform;
+use bincode;
 use block_mesh;
 use block_mesh::{ greedy_quads, GreedyQuadsBuffer, MergeVoxel, UnorientedQuad, RIGHT_HANDED_Y_UP_CONFIG };
 use feldspar::prelude::create_voxel_mesh_bundle;
 use std::error::Error;
-use std::io::BufWriter;
+use std::fs::File;
+use std::io::{BufReader, BufWriter};
 use std::path::PathBuf;
 use std::sync::Mutex;
 use std::sync::mpsc;
@@ -59,7 +61,7 @@ pub enum Event {
 }
 
 pub fn handle_events(
-    space: Res<World>,
+    mut space: ResMut<World>,
     mut events: Res<Mutex<Receiver<Event>>>,
 ) {
     let events = events.try_lock();
@@ -67,7 +69,13 @@ pub fn handle_events(
         for event in events.try_iter() {
             use Event::*;
             match event {
-                LoadFile(path) => {println!("Load")},
+                LoadFile(path) => {
+                    // Synchronous load.               
+                    // This is an easy trick to avoid the user interacting with the world
+                    // that is about to get replaced with a new one.
+                    load(&mut space, path)
+                        .unwrap_or_else(|e| eprintln!("Failed to load: {:?}", e));
+                }
                 SaveFile(path) => {
                     let space = (*space).clone();
                     thread::spawn(move ||
@@ -80,13 +88,15 @@ pub fn handle_events(
     }
 }
 
-use bincode;
-use std::fs;
+fn load(mut world: &mut World, path: PathBuf) -> Result<(), Box<dyn Error>>{
+    let f = File::open(path)?;
+    let mut f = BufReader::new(f);
+    world.0 = bincode::deserialize_from(&mut f)?;
+    Ok(())
+}
+
 fn save(world: World, path: PathBuf) -> Result<(), Box<dyn Error>>{
-    let f = fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .open(path)?;
+    let f = File::create(path)?;
     let mut f = BufWriter::new(f);
     bincode::serialize_into(&mut f, &world.0)?;
     Ok(())
