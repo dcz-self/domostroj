@@ -2,7 +2,11 @@ use baustein::indices::Index;
 use baustein::prefab::PaletteVoxel;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContext, EguiPlugin, EguiSettings};
+use rfd;
 use std::cmp;
+use std::sync::Mutex;
+use std::sync::mpsc::Sender;
+use std::thread;
 
 use crate::CursorRay;
 use crate::edit;
@@ -24,9 +28,11 @@ pub fn process(
     mut egui_ctx: ResMut<EguiContext>,
     mut tool: ResMut<CurrentTool>,
     mut slice_state: ResMut<slice::State>,
+    events: Res<Mutex<Sender<edit::Event>>>,
 ) {
     let old_state = State { tool: *tool, slice_state: *slice_state };
-    let new_state = process_panel(&mut *egui_ctx, old_state, &*voxel_info);
+    let events = events.lock().unwrap();
+    let new_state = process_panel(&mut *egui_ctx, old_state, &*voxel_info, &events);
     if new_state != old_state {
         *tool = new_state.tool;
         *slice_state = new_state.slice_state;
@@ -58,6 +64,7 @@ fn process_panel(
     egui_ctx: &mut EguiContext,
     mut ui_state: State,
     voxel_info: &Option<VoxelInfo>,
+    mut events: &Sender<edit::Event>,
 ) -> State {
     egui::SidePanel::left("side_panel")
         .show(egui_ctx.ctx(), |ui| {
@@ -94,6 +101,36 @@ fn process_panel(
     
                 ui.label(format!("{:?}", index));
                 ui.label(format!("{:?}", contents));
+            }
+            
+            ui.heading("Scene");
+            if ui.button("Load…").clicked() {
+                let sender = events.clone();
+                thread::spawn(move || {
+                    let path = rfd::FileDialog::new()
+                        .add_filter("Domostroj scene", &["domo"])
+                        .set_directory(".")
+                        .pick_file();
+                    if let Some(path) = path {
+                        sender
+                            .send(edit::Event::LoadFile(path))
+                            .unwrap_or_else(|e| eprintln!("Can't load: {:?}", e));
+                    }
+                });
+            }
+            if ui.button("Save…").clicked() {
+                let sender = events.clone();
+                thread::spawn(move || {
+                    let path = rfd::FileDialog::new()
+                        .add_filter("Domostroj scene", &["domo"])
+                        .set_directory(".")
+                        .save_file();
+                    if let Some(path) = path {
+                        sender
+                            .send(edit::Event::SaveFile(path))
+                            .unwrap_or_else(|e| eprintln!("Can't save: {:?}", e));
+                    }
+                });
             }
         });
     ui_state

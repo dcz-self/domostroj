@@ -21,6 +21,7 @@ futures = "0.3"
 float-ord = "0.3"
 genawaiter = "0.99"
 log = "0.4"
+rfd = "0.6"
 ron = "0.6"
 serde = "1.0"
 

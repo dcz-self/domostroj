@@ -23,6 +23,10 @@ use bevy::transform::components::Transform;
 use block_mesh;
 use block_mesh::{ greedy_quads, GreedyQuadsBuffer, MergeVoxel, UnorientedQuad, RIGHT_HANDED_Y_UP_CONFIG };
 use feldspar::prelude::create_voxel_mesh_bundle;
+use std::path::PathBuf;
+use std::sync::Mutex;
+use std::sync::mpsc;
+use std::sync::mpsc::Receiver;
 
 
 use baustein::traits::Extent;
@@ -43,6 +47,25 @@ pub fn floor() -> World {
         }
     });
     World(world.into())
+}
+
+pub enum Event {
+    LoadFile(PathBuf),
+    SaveFile(PathBuf),
+}
+
+pub fn handle_events(
+    space: Res<World>,
+    mut events: Res<Mutex<Receiver<Event>>>,
+) {
+    let events = events.lock().unwrap();
+    for event in events.try_iter() {
+        use Event::*;
+        match event {
+            LoadFile(path) => {println!("Load")},
+            SaveFile(path) => {}//save(&space.0),
+        }
+    }
 }
 
 // Older version needed for block_mesh
@@ -142,13 +165,16 @@ pub struct Plugin;
 
 impl bevy::app::Plugin for Plugin {
     fn build(&self, app: &mut AppBuilder) {
+        let (ui_sender, ui_receiver) = mpsc::channel::<Event>();
         app
             .insert_resource(floor())
             .insert_resource(CurrentTool::Slice)
             .insert_resource(slice::State::default())
             .insert_resource(slice::MeshCutoff::default())
             .insert_resource(Option::<ui::VoxelInfo>::None)
-            .add_event::<slice::edit::Events>()
+            .insert_resource(Mutex::new(ui_sender))
+            .insert_resource(Mutex::new(ui_receiver))
+            //.add_event::<slice::edit::Events>()
 //            .add_event::<DragFaceEvents>()
 //            .add_event::<SelectionEvents>()
             .add_system_set(
@@ -172,6 +198,7 @@ impl bevy::app::Plugin for Plugin {
                     .with_system(slice::show_mesh_count.system())
                     .with_system(ui::process.system())
                     .with_system(ui::update_voxel_info.system())
+                    .with_system(handle_events.system())
             );
     }
 }
