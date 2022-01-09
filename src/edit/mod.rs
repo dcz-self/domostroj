@@ -23,10 +23,13 @@ use bevy::transform::components::Transform;
 use block_mesh;
 use block_mesh::{ greedy_quads, GreedyQuadsBuffer, MergeVoxel, UnorientedQuad, RIGHT_HANDED_Y_UP_CONFIG };
 use feldspar::prelude::create_voxel_mesh_bundle;
+use std::error::Error;
+use std::io::BufWriter;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
+use std::thread;
 
 
 use baustein::traits::Extent;
@@ -34,6 +37,7 @@ use bevy::prelude::IntoSystem;
 
 
 /// A wrapper over a mundane chunk, for the purpose of becoming the Bevy resource.
+#[derive(Clone)]
 pub struct World(FlatPaddedGridCuboid<PaletteVoxel, ConstPow2Shape<5, 5, 5>>);
 
 /// Create a default World with a grassy, diggable floor below level 0.
@@ -64,10 +68,28 @@ pub fn handle_events(
             use Event::*;
             match event {
                 LoadFile(path) => {println!("Load")},
-                SaveFile(path) => {}//save(&space.0),
+                SaveFile(path) => {
+                    let space = (*space).clone();
+                    thread::spawn(move ||
+                        save(space, path)
+                            .unwrap_or_else(|e| eprintln!("Failed to save: {:?}", e))
+                    );
+                }
             }
         }
     }
+}
+
+use bincode;
+use std::fs;
+fn save(world: World, path: PathBuf) -> Result<(), Box<dyn Error>>{
+    let f = fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(path)?;
+    let mut f = BufWriter::new(f);
+    bincode::serialize_into(&mut f, &world.0)?;
+    Ok(())
 }
 
 // Older version needed for block_mesh
@@ -176,7 +198,7 @@ impl bevy::app::Plugin for Plugin {
             .insert_resource(Option::<ui::VoxelInfo>::None)
             .insert_resource(Mutex::new(ui_sender))
             .insert_resource(Mutex::new(ui_receiver))
-            //.add_event::<slice::edit::Events>()
+            .add_event::<slice::edit::Events>()
 //            .add_event::<DragFaceEvents>()
 //            .add_event::<SelectionEvents>()
             .add_system_set(

@@ -4,9 +4,9 @@ mod feldspar;
 mod serialize;
 
 use block_mesh::{ MergeVoxel, Voxel };
-use feldspar_map::palette::PaletteId8;
 use ndshape::ConstPow2Shape3u32;
 use ndshape::ConstPow2Shape3usize;
+use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::fmt;
 
@@ -22,8 +22,8 @@ pub type ChunkShape = ConstPow2Shape3u32<4, 4, 4>;
 
 
 /// The voxel that maps to a palette entry.
-#[derive(Clone, Copy, PartialEq, Default)]
-pub struct PaletteVoxel(pub PaletteId8);
+#[derive(Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
+pub struct PaletteVoxel(pub u8);
 
 impl PaletteVoxel {
     pub const EMPTY: PaletteVoxel = PaletteVoxel(0);

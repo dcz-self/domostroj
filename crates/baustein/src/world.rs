@@ -152,6 +152,7 @@ impl<'a, S: IterableSpace, Shape> IterableSpace for View<'a, S, Shape> {
 
 /// Flat 3d array, out-of-bounds gives default voxel.
 /// This should be pretty fast, but not suitable for any large space.
+#[derive(Clone)]
 pub struct FlatPaddedGridCuboid<V, Shape: ConstShape<3>> {
     pub(crate) data: Vec<V>,
     pub(crate) offset: Index,
