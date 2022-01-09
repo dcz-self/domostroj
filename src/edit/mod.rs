@@ -6,7 +6,7 @@ mod slice;
 
 use crate::EditorState;
  
-use baustein::indices::to_i32_arr;
+use baustein::indices::{to_i32_arr, VoxelUnits};
 use baustein::prefab::PaletteVoxel;
 use baustein::re::{ ConstPow2Shape, ConstShape };
 use baustein::render::{ mesh_from_quads, MeshMaterial };
@@ -136,8 +136,9 @@ pub fn update_meshes(
     
     let quads = generate_greedy_buffer_fast(&space);
     let material_lookup = |quad: &UnorientedQuad| {
-        let i = space.get(to_i32_arr(quad.minimum).into()).0;
+        let i = space.get(space.get_offset() + VoxelUnits(to_i32_arr(quad.minimum))).0;
         let mut material = [0; 4];
+        let i = i - 1; // 0 is empty
         material[i as usize] = 1;
         [material, material, material, material]
     };
