@@ -4,7 +4,7 @@
 use baustein::indices::{to_i32_arr, VoxelUnits};
 use baustein::prefab::PaletteVoxel;
 use baustein::re::{ ConstPow2Shape, ConstShape };
-use baustein::render::{ mesh_from_quads, MeshMaterial };
+use baustein::render::{ generate_greedy_buffer_fast, mesh_from_quads, MeshMaterial };
 use baustein::traits::Space;
 use baustein::world::FlatPaddedGridCuboid;
 use bevy::app;
@@ -99,33 +99,6 @@ pub fn update_meshes(
             .insert(RenderLayers::layer(1))
             ;
     }
-}
-
-/// This needs to stay here because each BlockmeshShape is specific to each renderer.
-fn generate_greedy_buffer_fast<V, Shape>(
-    view: &FlatPaddedGridCuboid<V, Shape>,
-) -> GreedyQuadsBuffer
-    where
-    V: MergeVoxel + Copy + Default,
-    Shape: ConstShape,
-{
-    let samples = view.get_samples();
-    let faces = RIGHT_HANDED_Y_UP_CONFIG.faces;
-    let mut buffer = GreedyQuadsBuffer::new(samples.len());
-
-    greedy_quads(
-        samples,
-        &BlockMeshShape {},
-        [0, 0, 0],
-        [
-            <Shape as ConstShape>::ARRAY[0] as u32 - 1,
-            <Shape as ConstShape>::ARRAY[1] as u32 - 1,
-            <Shape as ConstShape>::ARRAY[2] as u32 - 1,
-        ],
-        &faces,
-        &mut buffer,
-    );
-    buffer
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]

@@ -23,7 +23,6 @@ use feldspar::prelude::{
 };
 use feldspar::renderer::create_voxel_mesh_bundle;
 use ndshape;
-use ndshape::ConstShape;
 
 use crate::indices::{to_i32_arr, usize_to_u32_arr, ChunkIndex};
 use crate::prefab::{ PaletteIdChunk, PaletteVoxel, World };
@@ -204,6 +203,33 @@ fn generate_greedy_buffer<V, S, Shape>(
 
     greedy_quads(
         &samples,
+        &ndshape::RuntimeShape::<u32, 3>::new(usize_to_u32_arr(<Shape as re::ConstShape>::ARRAY)),
+        [0, 0, 0],
+        [
+            <Shape as re::ConstShape>::ARRAY[0] as u32 - 1,
+            <Shape as re::ConstShape>::ARRAY[1] as u32 - 1,
+            <Shape as re::ConstShape>::ARRAY[2] as u32 - 1,
+        ],
+        &faces,
+        &mut buffer,
+    );
+    buffer
+}
+
+
+pub fn generate_greedy_buffer_fast<V, Shape>(
+    view: &FlatPaddedGridCuboid<V, Shape>,
+) -> GreedyQuadsBuffer
+    where
+    V: MergeVoxel + Copy + Default,
+    Shape: re::ConstShape,
+{
+    let samples = view.get_samples();
+    let faces = RIGHT_HANDED_Y_UP_CONFIG.faces;
+    let mut buffer = GreedyQuadsBuffer::new(samples.len());
+
+    greedy_quads(
+        samples,
         &ndshape::RuntimeShape::<u32, 3>::new(usize_to_u32_arr(<Shape as re::ConstShape>::ARRAY)),
         [0, 0, 0],
         [
