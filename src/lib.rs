@@ -15,7 +15,7 @@ mod picking;
 mod plugin;
 mod stress;
 
-use camera::{create_camera_entity, CameraPlugin, CursorRay};
+use camera::CursorRay;
 use cursor_tracker::{CursorPosition, CursorPositionPlugin};
 use database::{open_voxel_database, save_map_to_db};
 use immediate_mode::{ImmediateModePlugin};

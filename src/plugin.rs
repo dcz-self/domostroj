@@ -20,10 +20,10 @@ use feldspar::{
 
 use crate::{
     analyze,
-    create_camera_entity,
+    camera::CameraPlugin,
     edit,
     generate, open_voxel_database, save_map_to_db, BevyConfig, CameraConfig,
-    CameraPlugin, Config, CursorPositionPlugin, ImmediateModePlugin,
+    Config, CursorPositionPlugin, ImmediateModePlugin,
     VoxelPickingPlugin,
 };
 
@@ -189,9 +189,8 @@ fn wait_for_assets_loaded(
     }
 }
 
-fn initialize_editor(mut commands: Commands, config: Res<Config>) {
+fn initialize_editor(mut commands: Commands) {
     create_lights(&mut commands);
-    initialize_camera(&mut commands, config.camera);
 }
 
 fn create_lights(commands: &mut Commands) {
@@ -215,8 +214,3 @@ fn create_lights(commands: &mut Commands) {
     }
 }
 
-fn initialize_camera(commands: &mut Commands, camera_config: CameraConfig) {
-    let eye = Vec3::new(40.0, 20.0, 40.0);
-    let target = Vec3::new(20.0, 0.0, 20.0);
-    create_camera_entity(commands, camera_config, eye, target);
-}

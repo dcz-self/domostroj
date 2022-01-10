@@ -4,6 +4,8 @@
 mod ui;
 mod slice;
 
+use crate::camera;
+use crate::config::{ CameraConfig, Config };
 use crate::EditorState;
  
 use baustein::indices::{to_i32_arr, VoxelUnits};
@@ -18,6 +20,7 @@ use bevy::ecs::entity::Entity;
 use bevy::ecs::query::With;
 use bevy::ecs::schedule::SystemSet;
 use bevy::ecs::system::{ Commands, Query, Res, ResMut };
+use bevy::math::Vec3;
 use bevy::render::mesh::Mesh;
 use bevy::transform::components::Transform;
 use bincode;
@@ -36,6 +39,7 @@ use std::thread;
 
 use baustein::traits::Extent;
 use bevy::prelude::IntoSystem;
+use bevy::prelude::ParallelSystemDescriptorCoercion;
 
 
 /// A wrapper over a mundane chunk, for the purpose of becoming the Bevy resource.
@@ -209,9 +213,14 @@ impl bevy::app::Plugin for Plugin {
             .insert_resource(Option::<ui::VoxelInfo>::None)
             .insert_resource(Mutex::new(ui_sender))
             .insert_resource(Mutex::new(ui_receiver))
+            
             .add_event::<slice::edit::Events>()
 //            .add_event::<DragFaceEvents>()
 //            .add_event::<SelectionEvents>()
+            .add_system_set(
+                SystemSet::on_enter(EditorState::Loading)
+                    .with_system(initialize_camera.system().after("load_chunks")),
+            )
             .add_system_set(
                 SystemSet::on_enter(EditorState::Editing)
                     .with_system(slice::setup_hint.system())
@@ -236,6 +245,13 @@ impl bevy::app::Plugin for Plugin {
                     .with_system(handle_events.system())
             );
     }
+}
+
+
+fn initialize_camera(mut commands: Commands, config: Res<Config>) {
+    let eye = Vec3::new(40.0, 20.0, 40.0);
+    let target = Vec3::new(20.0, 0.0, 20.0);
+    camera::spawn(&mut commands, &(*config).camera, eye, target);
 }
 
 #[cfg(test)]
