@@ -22,16 +22,16 @@ use feldspar::prelude::{
     spawn_array_material, ArrayMaterial, SdfVoxelPalette, VoxelRenderAssets, VoxelType, VoxelTypeInfo, VoxelMaterial,
 };
 use feldspar::renderer::create_voxel_mesh_bundle;
+use ndshape;
 use ndshape::ConstShape;
 
-use crate::indices::{to_i32_arr, ChunkIndex};
+use crate::indices::{to_i32_arr, usize_to_u32_arr, ChunkIndex};
 use crate::prefab::{ PaletteIdChunk, PaletteVoxel, World };
 use crate::re;
 use crate::traits::{IterableSpace, Space};
 use crate::world::{ Cow, FlatPaddedGridCuboid, View };
 
-
-type BlockMeshShape = block_mesh::ndshape::ConstShape3u32::<18, 18, 18>;
+type ChunkMeshShape = block_mesh::ndshape::ConstShape3u32::<18, 18, 18>;
 
 /// Requires: `LoadingTexture` resource.
 pub struct Plugin;
@@ -204,7 +204,7 @@ fn generate_greedy_buffer<V, S, Shape>(
 
     greedy_quads(
         &samples,
-        &BlockMeshShape {},
+        &ndshape::RuntimeShape::<u32, 3>::new(usize_to_u32_arr(<Shape as re::ConstShape>::ARRAY)),
         [0, 0, 0],
         [
             <Shape as re::ConstShape>::ARRAY[0] as u32 - 1,
@@ -235,7 +235,7 @@ fn generate_mesh_for_chunk(
 
     greedy_quads(
         &samples,
-        &BlockMeshShape {},
+        &ChunkMeshShape {},
         [0, 0, 0],
         [17, 17, 17],
         &faces,

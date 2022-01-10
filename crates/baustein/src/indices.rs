@@ -20,6 +20,10 @@ pub(crate) fn usize_to_i32_arr(a: [usize; 3]) -> [i32; 3] {
     [a[0] as i32, a[1] as i32, a[2] as i32]
 }
 
+pub(crate) fn usize_to_u32_arr(a: [usize; 3]) -> [u32; 3] {
+    [a[0] as u32, a[1] as u32, a[2] as u32]
+}
+
 pub(crate) fn to_u32_arr(a: [i32; 3]) -> [u32; 3] {
     [a[0] as u32, a[1] as u32, a[2] as u32]
 }
