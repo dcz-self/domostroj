@@ -228,7 +228,7 @@ dependencies = [
  "feldspar-core",
  "feldspar-map",
  "maplit",
- "ndshape 0.2.0 (git+https://github.com/dcz-self/ndshape-rs?rev=82e25b6)",
+ "ndshape 0.2.0 (git+https://github.com/bonsairobo/ndshape-rs?rev=d184932)",
  "serde",
 ]
 
@@ -777,11 +777,11 @@ checksum = "0d8c1fef690941d3e7788d328517591fecc684c084084702d6ff1641e993699a"
 [[package]]
 name = "block-mesh"
 version = "0.1.0"
-source = "git+https://github.com/bonsairobo/block-mesh-rs?rev=e8a81d1#e8a81d14c351485b7459701f50fafe53ff0222fb"
+source = "git+https://github.com/dcz-self/block-mesh-rs?rev=d68ec6783a1f349f8ed82e867e77b944ce09b59e#d68ec6783a1f349f8ed82e867e77b944ce09b59e"
 dependencies = [
  "ilattice 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ndcopy",
- "ndshape 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ndshape 0.2.0 (git+https://github.com/bonsairobo/ndshape-rs?rev=d184932)",
 ]
 
 [[package]]
@@ -1437,7 +1437,7 @@ dependencies = [
  "itertools 0.10.3",
  "log",
  "lz4_flex",
- "ndshape 0.2.0 (git+https://github.com/dcz-self/ndshape-rs?rev=82e25b6)",
+ "ndshape 0.2.0 (git+https://github.com/bonsairobo/ndshape-rs?rev=d184932)",
  "parking_lot",
  "sled 0.34.6 (git+https://github.com/spacejam/sled?rev=c840fe7e)",
  "smallvec",
@@ -2581,10 +2581,9 @@ dependencies = [
 [[package]]
 name = "ndcopy"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6afc977f2364b373136a0f8e25719059eea83b87619e5a02404c8332d7e4b868"
+source = "git+https://github.com/dcz-self/ndcopy-rs?rev=499d9b3#499d9b30ec0d5e57defc4969600882b397050728"
 dependencies = [
- "ndshape 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ndshape 0.2.0 (git+https://github.com/bonsairobo/ndshape-rs?rev=d184932)",
 ]
 
 [[package]]
@@ -2645,7 +2644,7 @@ dependencies = [
 [[package]]
 name = "ndshape"
 version = "0.2.0"
-source = "git+https://github.com/dcz-self/ndshape-rs?rev=82e25b6#82e25b6627d0162afacf901ab0c3b92780d93f16"
+source = "git+https://github.com/bonsairobo/ndshape-rs?rev=d184932#d184932ce7ad621004f8613721b3cfbe9c987651"
 dependencies = [
  "static_assertions",
 ]

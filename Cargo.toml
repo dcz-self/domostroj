@@ -32,10 +32,10 @@ version = "0.5"
 default-features = false
 features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"]
 
+# To match baustein
 [dependencies.block-mesh]
-git = "https://github.com/bonsairobo/block-mesh-rs"
-# branch = "main"
-rev = "e8a81d1"
+git = "https://github.com/dcz-self/block-mesh-rs"
+rev = "d68ec6783a1f349f8ed82e867e77b944ce09b59e"
 
 [dependencies.feldspar]
 git = "https://github.com/bonsairobo/feldspar"

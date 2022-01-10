@@ -13,10 +13,10 @@ building_blocks_mesh = "*" # depend on feldspar's version
 maplit = "1.0"
 serde = "1.0"
 
+# Uses current ndshape to avoid split personality
 [dependencies.block-mesh]
-git = "https://github.com/bonsairobo/block-mesh-rs"
-# branch = "main"
-rev = "e8a81d1"
+git = "https://github.com/dcz-self/block-mesh-rs"
+rev = "d68ec6783a1f349f8ed82e867e77b944ce09b59e"
 
 [dependencies.feldspar] # same as domostroj
 git = "https://github.com/bonsairobo/feldspar"
@@ -32,8 +32,8 @@ git = "https://github.com/bonsairobo/feldspar"
 rev = "7f3dd60898ee85c"
 
 [dependencies.ndshape]
-git = "https://github.com/dcz-self/ndshape-rs"
-rev = "82e25b6"
+git = "https://github.com/bonsairobo/ndshape-rs"
+rev = "d184932"
 
 
 [patch.'https://github.com/bonsairobo/feldspar']
