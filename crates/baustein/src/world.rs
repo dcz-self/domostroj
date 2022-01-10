@@ -150,6 +150,17 @@ impl<'a, S: IterableSpace, Shape> IterableSpace for View<'a, S, Shape> {
     }
 }
 
+impl<'a, S, Shape> Extent for View<'a, S, Shape>
+    where Shape: re::ConstShape
+{
+    fn get_offset(&self) -> Index {
+        self.offset
+    }
+    fn get_dimensions(&self) -> [usize; 3] {
+        <Shape as re::ConstShape>::ARRAY
+    }
+}
+
 /// Flat 3d array, out-of-bounds gives default voxel.
 /// This should be pretty fast, but not suitable for any large space.
 #[derive(Clone)]
@@ -408,6 +419,8 @@ impl<E, F> IntoCuboid for MapIndex<E, F>{}
 impl<E, F> IntoCuboid for Map<E, F>{}
 
 impl<E, F> IntoCuboid for Zip<E, F>{}
+
+impl<'a, S, Shape> IntoCuboid for View<'a, S, Shape> {}
 
 #[cfg(test)]
 mod test {

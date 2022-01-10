@@ -2,9 +2,13 @@
  *
  Based on bevy example source. */
 
-use baustein::prefab::{ PaletteIdChunk, PaletteVoxel, World };
-use baustein::world::Cow;
+ mod render;
 
+use baustein;
+use baustein::prefab::{ PaletteIdChunk, PaletteVoxel };
+use baustein::re::ConstPow2Shape;
+use baustein::render::generate_greedy_buffer;
+use baustein::world::{Cow, FlatPaddedGridCuboid};
 use bevy::{
     prelude::*,
     render::{
@@ -22,7 +26,7 @@ use bevy::{
 use bevy_egui;
 
 // used traits
-use baustein::traits::MutChunk;
+use baustein::traits::{ MutChunk, Space };
 
 
 /// This creates a second window with a different camera
@@ -253,8 +257,8 @@ fn eye_look_at_target_transform(eye: Vec3, target: Vec3) -> Transform {
     Transform::from_translation(eye).looking_at(look_at, Vec3::Y)
 }
 
-pub fn test_world() -> World {
-    let world = World::default();
+pub fn test_world() -> baustein::prefab::World {
+    let world = baustein::prefab::World::default();
     let mut cow = Cow::new(&world);
     for x in -2..5 {
         for y in -2..5 {
@@ -300,6 +304,25 @@ pub fn spin_spinners(
         *transform = transform.mul_transform(rot_step);
     }
 }
+
+
+/// A wrapper over a mundane chunk, for the purpose of becoming the Bevy resource.
+#[derive(Clone)]
+pub struct World(FlatPaddedGridCuboid<PaletteVoxel, ConstPow2Shape<5, 5, 5>>);
+
+/// Create a default World with a grassy, diggable floor below level 0.
+pub fn floor() -> World {
+    let extent = FlatPaddedGridCuboid::<(), ConstPow2Shape<5, 5, 5>>::new([0, -8, 0].into());
+    let world = extent.map_index(|i, _| {
+        if i.y() < 0 {
+            PaletteVoxel(1) // hopefully grass
+        } else {
+            PaletteVoxel::EMPTY
+        }
+    });
+    World(world.into())
+}
+
 
 pub mod stress {
     use super::*;
