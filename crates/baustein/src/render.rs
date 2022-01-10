@@ -250,6 +250,9 @@ fn generate_mesh_for_chunk(
     mesh_from_quads(buffer, &view, material_lookup)
 }
 
+/// Caution, the `vertex_map` function receives raw quads.
+/// Those quads are indexed relative to the GreedyQuadsBuffer,
+/// which will typically *not* match space indices.
 pub fn mesh_from_quads<S, V, M, F>(
     buffer: GreedyQuadsBuffer,
     view: &S,
