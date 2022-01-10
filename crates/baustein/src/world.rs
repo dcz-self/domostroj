@@ -2,7 +2,7 @@
 use feldspar_map::units::VoxelUnits;
 use ndshape::{ ConstShape, RuntimeShape };
 use std::collections::HashMap;
-use crate::indices::{to_i32_arr, to_u32_arr, to_usize_arr, usize_to_i32_arr, ChunkIndex, Index};
+use crate::indices::{to_usize_arr, usize_to_i32_arr, ChunkIndex, Index};
 use crate::prefab::{ PaletteIdChunk, PaletteVoxel, World };
 use crate::re;
 use crate::traits::{Extent, Space, IterableSpace, Map, MapIndex, Zip};

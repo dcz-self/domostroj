@@ -28,7 +28,7 @@ use crate::indices::{to_i32_arr, ChunkIndex};
 use crate::prefab::{ PaletteIdChunk, PaletteVoxel, World };
 use crate::re;
 use crate::traits::{IterableSpace, Space};
-use crate::world::{ Cow, View };
+use crate::world::{ Cow, FlatPaddedGridCuboid, View };
 
 
 type BlockMeshShape = block_mesh::ndshape::ConstShape3u32::<18, 18, 18>;
@@ -165,7 +165,7 @@ pub fn generate_transformeshes(
             &world,
             [-9, -9, -9].into(),
         );
-        let quads = generate_greedy_buffer(view.clone());
+        let quads = generate_greedy_buffer_slow(view.clone());
 
         let material_lookup = |quad: &UnorientedQuad| {
             let material = to_material(&palette, view.get(to_i32_arr(quad.minimum).into()));
@@ -189,7 +189,10 @@ pub fn generate_transformeshes(
     }
 }
 
-fn generate_greedy_buffer<V, S, Shape>(
+/// Slower version of `generate_greedy_buffer`,
+/// creates an intermediate Extent.
+/// Might be desirable if that's unavoidable.
+fn generate_greedy_buffer_slow<V, S, Shape>(
     view: View<S, Shape>,
 ) -> GreedyQuadsBuffer
     where
@@ -216,6 +219,36 @@ fn generate_greedy_buffer<V, S, Shape>(
     );
     buffer
 }
+
+/// Generates a greedy buffer,
+/// relative to the offset of the `view` structure.
+pub fn generate_greedy_buffer<V, Shape>(
+    view: &FlatPaddedGridCuboid<V, Shape>,
+) -> GreedyQuadsBuffer
+    where
+    V: MergeVoxel + Copy + Default,
+    Shape: re::ConstShape,
+{
+    let samples = view.get_samples();
+    let faces = RIGHT_HANDED_Y_UP_CONFIG.faces;
+
+    let mut buffer = GreedyQuadsBuffer::new(samples.len());
+
+    greedy_quads(
+        samples,
+        &BlockMeshShape {},
+        [0, 0, 0],
+        [
+            <Shape as re::ConstShape>::ARRAY[0] as u32 - 1,
+            <Shape as re::ConstShape>::ARRAY[1] as u32 - 1,
+            <Shape as re::ConstShape>::ARRAY[2] as u32 - 1,
+        ],
+        &faces,
+        &mut buffer,
+    );
+    buffer
+}
+
 
 fn generate_mesh_for_chunk(
     world: &World,
