@@ -51,3 +51,5 @@ rev = "8782b98"
 
 [patch.'https://github.com/bonsairobo/feldspar']
 feldspar = { path = "../feldspar" }
+feldspar-core = { path = "../feldspar/crates/feldspar-core" }
+feldspar-map = { path = "../feldspar/crates/feldspar-map" }
