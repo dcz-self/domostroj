@@ -2,12 +2,11 @@
  *
  Based on bevy example source. */
 
- mod render;
+pub mod render;
 
 use baustein;
 use baustein::prefab::{ PaletteIdChunk, PaletteVoxel };
 use baustein::re::ConstPow2Shape;
-use baustein::render::generate_greedy_buffer;
 use baustein::world::{Cow, FlatPaddedGridCuboid};
 use bevy::{
     prelude::*,
@@ -33,7 +32,7 @@ use baustein::traits::{ MutChunk, Space };
 /// Requires: EguiPlugin
 pub struct CameraPlugin;
 
-impl Plugin for CameraPlugin {
+impl bevy::app::Plugin for CameraPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app
             .add_state(AppState::CreateWindow)
@@ -41,6 +40,17 @@ impl Plugin for CameraPlugin {
                 SystemSet::on_update(AppState::CreateWindow).with_system(setup_window.system()),
             )
             .add_system_set(SystemSet::on_update(AppState::Setup).with_system(setup_pipeline.system()));
+    }
+}
+
+pub struct Plugin;
+
+impl bevy::app::Plugin for Plugin {
+    fn build(&self, app: &mut AppBuilder) {
+        app
+            .add_plugin(CameraPlugin)
+            .insert_resource(floor())
+            ;
     }
 }
 
@@ -355,9 +365,3 @@ pub mod stress {
     }
 }
 
-
-pub fn start_loading_render_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.insert_resource(baustein::render::LoadingTexture(
-        asset_server.load("grass_rock_snow_dirt/base_color.png"),
-    ));
-}

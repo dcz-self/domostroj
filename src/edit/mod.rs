@@ -11,7 +11,7 @@ use crate::EditorState;
 use baustein::indices::{to_i32_arr, VoxelUnits};
 use baustein::prefab::PaletteVoxel;
 use baustein::re::{ ConstPow2Shape, ConstShape };
-use baustein::render::{ generate_greedy_buffer, mesh_from_quads, MeshMaterial };
+use baustein::render::{ mesh_from_quads, MeshMaterial };
 use baustein::traits::Space;
 use baustein::world::FlatPaddedGridCuboid;
 use bevy::app::AppBuilder;
@@ -138,7 +138,7 @@ pub fn update_meshes(
     type Shape = ConstPow2Shape<5, 5, 5>;
     let space = FlatPaddedGridCuboid::<_, Shape>::new_from_space(&space, space.get_offset());
     
-    let quads = generate_greedy_buffer(&space);
+    let quads = generate_greedy_buffer_fast(&space);
     let material_lookup = |quad: &UnorientedQuad| {
         let i = space.get(space.get_offset() + VoxelUnits(to_i32_arr(quad.minimum))).0;
         let mut material = [0; 4];
@@ -161,6 +161,33 @@ pub fn update_meshes(
             .insert(EditMesh)
             ;
     }
+}
+
+/// This needs to stay here because each BlockmeshShape is specific to each renderer.
+fn generate_greedy_buffer_fast<V, Shape>(
+    view: &FlatPaddedGridCuboid<V, Shape>,
+) -> GreedyQuadsBuffer
+    where
+    V: MergeVoxel + Copy + Default,
+    Shape: ConstShape,
+{
+    let samples = view.get_samples();
+    let faces = RIGHT_HANDED_Y_UP_CONFIG.faces;
+    let mut buffer = GreedyQuadsBuffer::new(samples.len());
+
+    greedy_quads(
+        samples,
+        &BlockMeshShape {},
+        [0, 0, 0],
+        [
+            <Shape as ConstShape>::ARRAY[0] as u32 - 1,
+            <Shape as ConstShape>::ARRAY[1] as u32 - 1,
+            <Shape as ConstShape>::ARRAY[2] as u32 - 1,
+        ],
+        &faces,
+        &mut buffer,
+    );
+    buffer
 }
 
 #[derive(Debug, Clone, PartialEq, Copy)]

@@ -116,6 +116,10 @@ impl Plugin for EditorPlugin {
                 SystemSet::on_update(EditorState::Loading)
                     .with_system(wait_for_assets_loaded.system()),
             )
+            .add_system_set(
+                SystemSet::on_enter(EditorState::Loading)
+                    .with_system(start_loading_render_assets_baustein.system()),
+            )
             // Initialize entities.
             .add_system_set(
                 SystemSet::on_enter(EditorState::Editing)
@@ -130,10 +134,9 @@ impl Plugin for EditorPlugin {
             )
             .add_plugin(edit::Plugin)
             // Generator
-            .add_system_set(
-                SystemSet::on_enter(baustein::render::TextureState::Loading)
-                    .with_system(generate::start_loading_render_assets.system()),
-            )
+            .add_plugin(generate::Plugin)
+            .add_plugin(generate::render::Plugin)
+            // Nice but not used
             .add_system_set(
                 SystemSet::on_update(EditorState::Editing)
                     .with_system(baustein::render::generate_transformeshes.system())
@@ -168,6 +171,13 @@ struct LoadingTexture(Handle<Texture>);
 
 fn start_loading_render_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(LoadingTexture(
+        asset_server.load("grass_rock_snow_dirt/base_color.png"),
+    ));
+}
+
+/// Honestly no idea which system pulls this
+pub fn start_loading_render_assets_baustein(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.insert_resource(baustein::render::LoadingTexture(
         asset_server.load("grass_rock_snow_dirt/base_color.png"),
     ));
 }
