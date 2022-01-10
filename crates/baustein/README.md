@@ -60,7 +60,7 @@ License
 
 ### Summary for users
 
-*Baustein* contains pieces licensed under the "Apache-2.0 or MIT" scheme, as well as pieces under the LGPL 3.0 license.
+*Baustein* contains pieces licensed under the "Apache-2.0 or MIT" scheme, as well as pieces under the [LGPL 3.0](https://choosealicense.com/licenses/lgpl-3.0/) license.
 
 That means: if you distribute modified versions of *Baustein*, you must make its sources available.
 
@@ -68,7 +68,7 @@ That means: if you distribute modified versions of *Baustein*, you must make its
 
 If you use *Baustein* in binary form together with closed libraries, then you must also make it possible for the user to replace *Baustein* with their own recompiled version.
 
-*(This is just a quick summary, not guaranteed to be 100% accurate.)*
+*(This is just a simplified summary, not guaranteed to be 100% complete. See also [this summary](https://choosealicense.com/licenses/lgpl-3.0/).)*
 
 ### Summary for cntributors
 
