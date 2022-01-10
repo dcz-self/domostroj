@@ -50,6 +50,7 @@ In your `Cargo.toml`, add this:
 ```
 [dependencies.baustein]
 git = "https://github.com/dcz-self/domostroj"
+rev = "c26aaba2b"
 ```
 
 *Baustein* is still badly experimental, so you might want to update the revision occasionally.
