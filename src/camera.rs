@@ -31,8 +31,8 @@ pub struct CameraPlugin;
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_plugin(LookTransformPlugin)
-            .add_plugin(UnrealCameraPlugin)
-            .add_plugin(OrbitCameraPlugin)
+            .add_plugin(UnrealCameraPlugin::default())
+            .add_plugin(OrbitCameraPlugin::default())
             .add_plugin(CursorRayPlugin);
     }
 }

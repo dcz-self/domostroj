@@ -44,7 +44,7 @@ rev = "e09001c1"
 
 [dependencies.smooth-bevy-cameras]
 git = "https://github.com/bonsairobo/smooth-bevy-cameras"
-rev = "8782b98"
+rev = "4b936de392aa26862ebfc435490c6b7aa7fdd225"
 # branch = "main"
 # path = "../smooth-bevy-cameras"
 
