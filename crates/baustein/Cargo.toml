@@ -19,17 +19,17 @@ git = "https://github.com/dcz-self/block-mesh-rs"
 rev = "d68ec6783a1f349f8ed82e867e77b944ce09b59e"
 
 [dependencies.feldspar] # same as domostroj
-git = "https://github.com/bonsairobo/feldspar"
+git = "https://github.com/dcz-self/feldspar/"
 # branch = "main"
-rev = "e09001c1"
+rev = "3af9c837c6b0cb20df8e32effb75f121586a6a19"
 
 [dependencies.feldspar-core]
-git = "https://github.com/bonsairobo/feldspar"
-rev = "7f3dd60898ee85c"
+git = "https://github.com/dcz-self/feldspar/"
+rev = "3af9c837c6b0cb20df8e32effb75f121586a6a19"
 
 [dependencies.feldspar-map]
-git = "https://github.com/bonsairobo/feldspar"
-rev = "7f3dd60898ee85c"
+git = "https://github.com/dcz-self/feldspar/"
+rev = "3af9c837c6b0cb20df8e32effb75f121586a6a19"
 
 [dependencies.ndshape]
 git = "https://github.com/bonsairobo/ndshape-rs"

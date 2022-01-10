@@ -38,9 +38,8 @@ git = "https://github.com/dcz-self/block-mesh-rs"
 rev = "d68ec6783a1f349f8ed82e867e77b944ce09b59e"
 
 [dependencies.feldspar]
-git = "https://github.com/bonsairobo/feldspar"
-# branch = "main"
-rev = "e09001c1"
+git = "https://github.com/dcz-self/feldspar/"
+rev = "3af9c837c6b0cb20df8e32effb75f121586a6a19"
 
 [dependencies.smooth-bevy-cameras]
 git = "https://github.com/bonsairobo/smooth-bevy-cameras"
