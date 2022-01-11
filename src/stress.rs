@@ -424,14 +424,13 @@ mod test {
     /// Checks a single bedrock voxel
     #[test]
     fn bedrock() {
-        use genawaiter::GeneratorState::*;
         // 2x2x2
         type Shape = ConstPow2Shape<1, 1, 1>;
         let mut world = FlatPaddedGridCuboid::<StressVoxel, Shape>::new([0, 0, 0].into());
         world.set([0, 0, 0].into(), StressVoxel::Bedrock).unwrap();
 
         // For this algorithm, empty is ignored, and bedrock forces should too.
-        let weights = world.map(|v| Force(1.0));
+        let weights = world.map(|_v| Force(1.0));
         let outforces = get_initial_forces(&world);
 
         let outforces = distribute(&world, &weights, &outforces);
@@ -446,14 +445,13 @@ mod test {
     /// Actually, this will never work. the forces have nowhere to spread.
     #[test]
     fn bound1() {
-        use genawaiter::GeneratorState::*;
         // 4x4x4
         type Shape = ConstPow2Shape<2, 2, 2>;
         let mut world = FlatPaddedGridCuboid::<StressVoxel, Shape>::new([0, 0, 0].into());
         world.set([1, 1, 1].into(), StressVoxel::Bound).unwrap();
 
         // For this algorithm, empty is ignored, and bedrock forces should too.
-        let weights = world.map(|v| Force(1.0));
+        let weights = world.map(|_v| Force(1.0));
         let outforces = get_initial_forces(&world);
 
         let outforces = distribute(&world, &weights, &outforces);
@@ -466,7 +464,6 @@ mod test {
     /// Checks two voxels: one bound to bedrock.
     #[test]
     fn boundb() {
-        use genawaiter::GeneratorState::*;
         // 4x4x4
         type Shape = ConstPow2Shape<2, 2, 2>;
         let mut world = FlatPaddedGridCuboid::<StressVoxel, Shape>::new([0, 0, 0].into());
@@ -474,7 +471,7 @@ mod test {
         world.set([1, 1, 2].into(), StressVoxel::Bedrock).unwrap();
 
         // For this algorithm, empty is ignored, and bedrock forces should too.
-        let weights = world.map(|v| Force(1.0));
+        let weights = world.map(|_v| Force(1.0));
         let mut outforces = get_initial_forces(&world);
 
         for i in 0..4 {
@@ -509,7 +506,7 @@ mod test {
         world.set([1, 1, 3].into(), StressVoxel::Bound).unwrap();
 
         // For this algorithm, empty is ignored, and bedrock forces should too.
-        let weights = world.map(|v| Force(1.0));
+        let weights = world.map(|_v| Force(1.0));
         let mut outforces = get_initial_forces(&world);
 
         for i in 0..10 {
