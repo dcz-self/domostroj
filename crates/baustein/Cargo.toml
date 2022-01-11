@@ -8,8 +8,7 @@ license = "LGPL-3.0-or-later"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = { version = "0.5", default-features = false }
-building_blocks_mesh = "*" # depend on feldspar's version
+bevy = { version = "0.5", default-features = false, optional = true }
 maplit = "1.0"
 serde = "1.0"
 
@@ -22,6 +21,7 @@ rev = "d68ec6783a1f349f8ed82e867e77b944ce09b59e"
 git = "https://github.com/dcz-self/feldspar/"
 # branch = "main"
 rev = "3af9c837c6b0cb20df8e32effb75f121586a6a19"
+optional = true
 
 [dependencies.feldspar-core]
 git = "https://github.com/dcz-self/feldspar/"
@@ -35,6 +35,9 @@ rev = "3af9c837c6b0cb20df8e32effb75f121586a6a19"
 git = "https://github.com/bonsairobo/ndshape-rs"
 rev = "d184932"
 
+[features]
+prefab_feldspar = ["feldspar"]
+prefab_bevy = ["bevy"]
 
 [patch.'https://github.com/bonsairobo/feldspar']
 feldspar = { path = "../../../feldspar" }

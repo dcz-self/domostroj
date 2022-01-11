@@ -1,4 +1,5 @@
 /*! Indexing facilities */
+#[cfg(feature="prefab_bevy")]
 use bevy::prelude::Vec3;
 use feldspar_core::glam::IVec3;
 use feldspar_map;
@@ -109,6 +110,7 @@ impl From<IVec3> for WorldIndex {
     }
 }
 
+#[cfg(feature="prefab_bevy")]
 impl From<Vec3> for WorldIndex {
     fn from(coords: Vec3) -> Self {
         [coords.x.round() as i32, coords.y.round() as i32, coords.z.round() as i32].into()
@@ -133,6 +135,7 @@ impl Into<IVec3> for WorldIndex {
     }
 }
 
+#[cfg(feature="prefab_bevy")]
 impl Into<Vec3> for WorldIndex {
     fn into(self) -> Vec3 {
         Vec3::new(self.0.x as f32, self.0.y as f32, self.0.z as f32)

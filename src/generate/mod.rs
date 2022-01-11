@@ -325,7 +325,7 @@ pub fn floor() -> World {
     let extent = FlatPaddedGridCuboid::<(), ConstPow2Shape<5, 5, 5>>::new([0, -8, 0].into());
     let world = extent.map_index(|i, _| {
         if i.y() < 0 {
-            PaletteVoxel(1) // hopefully grass
+            PaletteVoxel(2) // hopefully ground
         } else {
             PaletteVoxel::EMPTY
         }

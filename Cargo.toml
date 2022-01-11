@@ -15,7 +15,7 @@ release = { lto = "thin" }
 [dependencies]
 approx = "0.4"
 assert_float_eq = { path = "external/assert_float_eq" }
-baustein = { path = "crates/baustein" }
+baustein = { path = "crates/baustein", features = ["prefab_bevy", "prefab_feldspar"] }
 bevy_egui = "0.9"
 bincode = "1.3"
 env_logger = "0.8"

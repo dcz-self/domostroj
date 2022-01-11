@@ -1,5 +1,5 @@
 use bevy::app::prelude::*;
-use domostroj::{generate, Config, EditorPlugin};
+use domostroj::{Config, EditorPlugin};
 
 
 fn main() -> Result<(), ron::Error> {
