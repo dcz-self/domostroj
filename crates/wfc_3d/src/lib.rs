@@ -171,7 +171,9 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
+    use baustein::re::ConstPow2Shape;
 
+    #[derive(Copy, Clone)]
     struct DumbPalette;
 
     impl Palette<u16> for DumbPalette {
@@ -182,5 +184,16 @@ mod test {
     fn foo() {
         let voxel = PaletteVoxel::<u16, DumbPalette>::default();
         let _v: u16 = voxel.get();
+    }
+
+    #[test]
+    fn stamps() {
+        type Voxel = PaletteVoxel::<u16, DumbPalette>;
+        type Shape = ConstPow2Shape<3, 3, 3>;
+        type StampShape = ConstPow2Shape<1, 1, 1>;
+        let world = FlatPaddedGridCuboid::<Voxel, Shape>::new([0, 0, 0].into());
+        let stamps = gather_stamps::<_, _, StampShape, _>(&world, Wrapping);
+        assert_eq!(stamps.len(), 1);
+        assert_eq!(stamps.into_values().collect::<Vec<_>>(), vec![6*6*6]);
     }
 }
