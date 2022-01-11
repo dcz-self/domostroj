@@ -3966,6 +3966,9 @@ dependencies = [
 [[package]]
 name = "wfc_3d"
 version = "0.1.0"
+dependencies = [
+ "baustein",
+]
 
 [[package]]
 name = "wgpu"
