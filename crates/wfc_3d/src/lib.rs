@@ -20,11 +20,18 @@ fn popcount<T: Hash + Eq>(i: impl Iterator<Item=T>) -> HashMap<T, usize> {
 
 
 /// An index starting from 0
+#[derive(Copy, Clone)]
 struct StampIndex([usize; 3]);
 
 /// A 0-indexed fragment of a space, with static dimensions.
 /// Compared by its contents.
 /// Hashing and comparison allocate :/
+/// This is stored in 8 + 3*4(index) = 20 bytes.
+/// 20 bytes is still 2×2×5 voxels. Still less than 3×3×3.
+/// So don't use this for small stamps.
+/// If index is limited to 0..256 in each dimension,
+/// then 8 + 3*1 = 11 bytes (+1 padding?).
+/// Less than 2×2×3 voxels.
 struct ViewStamp<'a, Shape: ConstShape, S: Space + 'a> {
     space: &'a S,
     offset: Index,
@@ -58,6 +65,24 @@ impl<'a, V, Shape, S> ViewStamp<'a, Shape, S>
     }
 }
 
+impl<'a, Shape, S> ViewStamp<'a, Shape, S>
+    where
+    Shape: ConstShape,
+    S: Space<Voxel=Superposition> + 'a,
+{
+    fn contains<U>(&self, stamp: ViewStamp<Shape, U>) -> bool
+        where U: Space<Voxel=VoxelId>
+    {
+        for i in 0..Shape::SIZE {
+            let index = StampIndex(Shape::delinearize(i));
+            if !self.get(index).contains(stamp.get(index)) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+
 impl<'a, V, Shape, S> Hash for ViewStamp<'a, Shape, S>
     where
     V: Copy + Hash,
@@ -87,8 +112,10 @@ impl<'a, V, Shape, S> cmp::Eq for ViewStamp<'a, Shape, S>
     S: Space<Voxel=V> + 'a,
 {}
 
-/// This should be enough for all different voxel types: 16K.
-type VoxelId = u16;
+/// This should be enough for all relevant voxel types: 256.
+/// If more is actually used, this should represent categories,
+/// and another pass of generation used for specializing them.
+type VoxelId = u8;
 
 /// Not instantiable. A mapping between u64 and an actual type of voxel.
 trait Palette<V> {
@@ -96,6 +123,9 @@ trait Palette<V> {
     fn default() -> VoxelId;
 }
 
+/// A voxel ID that can be resolved to the Voxel
+/// without storing extra memory.
+/// Probably premature, this blows up type signatures.
 #[derive(Copy, Clone, Debug)]
 struct PaletteVoxel<V, P: Palette<V>> {
     id: VoxelId,
@@ -168,6 +198,30 @@ where
     counts
 }
 
+// A bitmap is used because the set of items inside
+// is close to the entire space of items.
+// Forget Bloom filters.
+// u128 likely slow on 64-bit systems,
+// so skip that until an actual need emerges.
+/// Can only distinguish 64 items.
+/// Distinguishes integers strictly.
+// Storage is a bit mask
+// where a set bit marks a missing value.
+#[derive(Clone, Copy)]
+struct Superposition(u64);
+
+impl Superposition {
+    fn new_full() -> Self {
+        Self(0)
+    }
+    fn contains(&self, v: VoxelId) -> bool {
+        (self.0 & (1 << (v as u64))) == 0
+    }
+    fn is_empty(&self) -> bool {
+        self.0 == u64::MAX
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -177,7 +231,7 @@ mod test {
     struct DumbPalette;
 
     impl Palette<u16> for DumbPalette {
-        fn get(id: VoxelId) -> u16 { id }
+        fn get(id: VoxelId) -> u16 { id as u16 }
         fn default() -> VoxelId { 0 }
     }
     #[test]
