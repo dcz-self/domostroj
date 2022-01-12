@@ -13,3 +13,4 @@ more-asserts = { path = "../../external/rust-more-asserts" }
 
 [dependencies]
 baustein = { path = "../baustein" }
+float-ord = { path = "../../external/rust-float-ord" }

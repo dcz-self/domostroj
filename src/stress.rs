@@ -408,7 +408,6 @@ mod test {
 
     use baustein::world::FlatPaddedGridCuboid;
     use baustein::re::ConstPow2Shape;
-    use std::pin::Pin;
 
 /*
     struct Solver(FlatPaddedCuboid<SixForces>);

@@ -1252,7 +1252,7 @@ dependencies = [
  "block-mesh",
  "env_logger 0.8.4",
  "feldspar",
- "float-ord",
+ "float-ord 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures",
  "genawaiter",
  "log",
@@ -1398,7 +1398,7 @@ dependencies = [
  "bytemuck",
  "either",
  "feldspar-core",
- "float-ord",
+ "float-ord 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures",
  "grid-ray",
  "grid-tree",
@@ -1444,6 +1444,13 @@ name = "fixedbitset"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "279fb028e20b3c4c320317955b77c5e0c9701f05a1d309905d6fc702cdc5053e"
+
+[[package]]
+name = "float-ord"
+version = "0.3.2"
+dependencies = [
+ "rand",
+]
 
 [[package]]
 name = "float-ord"
@@ -3973,6 +3980,7 @@ version = "0.1.0"
 dependencies = [
  "assert_float_eq",
  "baustein",
+ "float-ord 0.3.2",
  "more-asserts",
 ]
 

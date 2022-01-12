@@ -2,6 +2,7 @@ use baustein::indices::{ usize_to_i32_arr, Index, VoxelUnits };
 use baustein::re::ConstShape;
 use baustein::traits::Space;
 use baustein::world::FlatPaddedGridCuboid;
+use float_ord::FloatOrd;
 use std::cmp;
 use std::collections::HashMap;
 use std::hash::{ Hash, Hasher };
@@ -65,17 +66,19 @@ impl<'a, V, Shape, S> ViewStamp<'a, Shape, S>
     }
 }
 
+//ViewStamp<'a, StampShape, FlatPaddedGridCuboid<VoxelId, Shape>>;
+
 impl<'a, Shape, S, const C: u8> ViewStamp<'a, Shape, S>
     where
     Shape: ConstShape,
     S: Space<Voxel=Superposition<C>> + 'a,
 {
-    fn is_allowed<U>(&self, stamp: ViewStamp<Shape, U>) -> bool
+    fn allows<U>(&self, stamp: ViewStamp<Shape, U>) -> bool
         where U: Space<Voxel=VoxelId>
     {
         for i in 0..Shape::SIZE {
             let index = StampIndex(Shape::delinearize(i));
-            if !self.get(index).is_allowed(stamp.get(index)) {
+            if !self.get(index).allows(stamp.get(index)) {
                 return false;
             }
         }
@@ -210,7 +213,7 @@ where
 /// where only one option remains.
 // Storage is a bit mask
 // where a set bit marks a missing value.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 struct Superposition<const DIMENSIONS: u8>(u64);
 
 impl<const D: u8> Superposition<D> {
@@ -220,7 +223,7 @@ impl<const D: u8> Superposition<D> {
     fn impossible() -> Self {
         Self(((D as u64) << 2) - 1)
     }
-    fn is_allowed(&self, v: VoxelId) -> bool {
+    fn allows(&self, v: VoxelId) -> bool {
         (self.0 & (1 << (v as u64))) == 0
     }
     fn count_allowed(&self) -> u8 {
@@ -269,6 +272,48 @@ fn get_entropy(weights: impl Iterator<Item=usize>, total: usize) -> f32 {
 
 fn log2(v: usize) -> usize {
     (usize::BITS - v.leading_zeros() - 1) as usize
+}
+
+/// Superposition type
+type FPC<S, const C: u8> = FlatPaddedGridCuboid<Superposition<C>, S>;
+/// Stamp type
+type VS<'a, StampShape, Shape> = ViewStamp<'a, StampShape, FlatPaddedGridCuboid<VoxelId, Shape>>;
+/// Superposition stamp template
+type SS<'a, StampShape, Shape, const C: u8> = ViewStamp<'a, StampShape, FlatPaddedGridCuboid<Superposition<C>, Shape>>;
+
+/// Returns the index of the template that has the lowest entropy
+/// in relation to possible stamp choices,
+/// or None if all are either undefined or 0.
+fn find_lowest_entropy<'a, Shape, StampShape, const C: u8>(
+    wave: &FPC<Shape, C>,
+    stamps: &[(VS<'a, StampShape, Shape>, usize)],
+) -> Option<Index>
+    where
+    Shape: ConstShape,
+    StampShape: ConstShape,
+{
+    wave
+        .enumerate()
+        .map(|i| SS::<StampShape, Shape, C>::new(wave, i))
+        .map(|template| (
+            template.offset,
+            // TODO: this is the same work twice. Optimization potential.
+            stamps.iter()
+                .filter(|(stamp, _occurrences)| template.allows(stamp))
+                .map(|(_stamp, occurrences)| occurrences),
+            stamps.iter()
+                .filter(|(stamp, _occurrences)| template.allows(stamp))
+                .map(|(_stamp, occurrences)| occurrences)
+                .sum(),
+        ))
+        // Undefined entropy
+        .filter(|(_i, _occurrences, total)| total =! 0)
+        .map(|(i, occurrences, total)| (i, FloatOrd(get_entropy(occurrences, total))))
+        .filter(|(_i, entropy)| entropy != 0)
+        // This can't be solved by a clever ordering of the tuple like Python does,
+        // because Index is not orderable, and by design.
+        .min_by_key(|(_index, entropy)| entropy)
+        .map(|(index, _entropy)| index)
 }
 
 #[cfg(test)]
@@ -324,6 +369,14 @@ mod test {
         let items = [30000, 1];
         let total = items.iter().sum();
         assert_ne!(get_entropy(items.iter().map(|v| *v), total), 0.0);
+    }
+
+    #[test]
+    fn entropy_0() {
+        // Nothing.
+        let items = [5];
+        let total = items.iter().sum();
+        assert_eq!(get_entropy(items.iter().map(|v| *v), total), 0.0);
     }
 
     #[test]
