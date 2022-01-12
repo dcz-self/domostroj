@@ -2466,6 +2466,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "more-asserts"
+version = "0.2.2"
+
+[[package]]
 name = "morton-encoding"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3967,7 +3971,9 @@ dependencies = [
 name = "wfc_3d"
 version = "0.1.0"
 dependencies = [
+ "assert_float_eq",
  "baustein",
+ "more-asserts",
 ]
 
 [[package]]
