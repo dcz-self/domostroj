@@ -65,17 +65,17 @@ impl<'a, V, Shape, S> ViewStamp<'a, Shape, S>
     }
 }
 
-impl<'a, Shape, S> ViewStamp<'a, Shape, S>
+impl<'a, Shape, S, const C: u8> ViewStamp<'a, Shape, S>
     where
     Shape: ConstShape,
-    S: Space<Voxel=Superposition> + 'a,
+    S: Space<Voxel=Superposition<C>> + 'a,
 {
-    fn contains<U>(&self, stamp: ViewStamp<Shape, U>) -> bool
+    fn is_allowed<U>(&self, stamp: ViewStamp<Shape, U>) -> bool
         where U: Space<Voxel=VoxelId>
     {
         for i in 0..Shape::SIZE {
             let index = StampIndex(Shape::delinearize(i));
-            if !self.get(index).contains(stamp.get(index)) {
+            if !self.get(index).is_allowed(stamp.get(index)) {
                 return false;
             }
         }
@@ -203,29 +203,80 @@ where
 // Forget Bloom filters.
 // u128 likely slow on 64-bit systems,
 // so skip that until an actual need emerges.
-/// Can only distinguish 64 items.
+/// Tracks which items have been excluded.
+/// Can only distinguish up to 64 items.
 /// Distinguishes integers strictly.
+/// The dimension count is needed to be able to distinguish the case
+/// where only one option remains.
 // Storage is a bit mask
 // where a set bit marks a missing value.
 #[derive(Clone, Copy)]
-struct Superposition(u64);
+struct Superposition<const DIMENSIONS: u8>(u64);
 
-impl Superposition {
-    fn new_full() -> Self {
-        Self(0)
+impl<const D: u8> Superposition<D> {
+    /// Nothing excluded
+    const FREE: Self = Self(0);
+    /// Everything excluded; use as a mask.
+    fn impossible() -> Self {
+        Self(((D as u64) << 2) - 1)
     }
-    fn contains(&self, v: VoxelId) -> bool {
+    fn is_allowed(&self, v: VoxelId) -> bool {
         (self.0 & (1 << (v as u64))) == 0
     }
-    fn is_empty(&self) -> bool {
-        self.0 == u64::MAX
+    fn count_allowed(&self) -> u8 {
+        D - self.0.count_ones() as u8
     }
+}
+
+/// Calculates Shannon entropy of weighted options multiplied by total weight.
+///
+/// Shannon entropy (in natural units):
+///
+/// P_i: probability of choosing an item
+///
+/// H = -Σ{i} P_i · log(P_i)
+///
+/// In this case, the probability is defined by the occurrence count w_i
+/// and total number of occurrences across all items W:
+///
+/// P_i = w_i / W
+///
+/// Transforming to achieve more operations that can be done on integers efficiently:
+///
+/// H = -Σ{i} P_i · log(P_i)
+/// = -Σ{i} w_i / W · log(w_i / W)
+/// = -Σ{i} w_i / W · (log(w_i) - log(W))
+/// = Σ{i} w_i / W · (log(W) - log(w_i))
+/// = 1/W · Σ{i} w_i · (log(W) - log(w_i))
+///
+/// In our case, this is executing on the CPU, so integer efficiency matters.
+/// log(x) is approximated with the use of usize::leading_zeros().
+/// Meanwhile, division is more lossy.
+///
+/// The result is fast in integers, at the cost of not being so accurate at low entropies
+/// (which is quite useless actually), so it does the final division in float (I give up).
+///
+/// Problems:
+/// - the number of occurrences can't be more than usize::MAX / 2, or log() will flop.
+/// - total = 0, or any item results in a panic.
+fn get_entropy(weights: impl Iterator<Item=usize>, total: usize) -> f32 {
+    let log_total = log2(total);
+    weights
+        .map(|w| w * (log_total - log2(w)))
+        .sum::<usize>() as f32
+        / (total as f32)
+}
+
+fn log2(v: usize) -> usize {
+    (usize::BITS - v.leading_zeros() - 1) as usize
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use assert_float_eq::*;
     use baustein::re::ConstPow2Shape;
+    use more_asserts::*;
 
     #[derive(Copy, Clone)]
     struct DumbPalette;
@@ -250,4 +301,82 @@ mod test {
         assert_eq!(stamps.len(), 1);
         assert_eq!(stamps.into_values().collect::<Vec<_>>(), vec![6*6*6]);
     }
+
+    #[test]
+    fn log() {
+        for i in 0..usize::BITS {
+            assert_eq!(log2(1 << i as usize), i as usize);
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn log0() {
+        log2(0); // -1, not representable, no one cares here.
+    }
+
+    #[test]
+    fn entropy() {
+        let items = [30, 1];
+        let total = items.iter().sum();
+        assert_ne!(get_entropy(items.iter().map(|v| *v), total), 0.0);
+        // How extreme can we get?
+        let items = [30000, 1];
+        let total = items.iter().sum();
+        assert_ne!(get_entropy(items.iter().map(|v| *v), total), 0.0);
+    }
+
+    #[test]
+    fn entropy_1() {
+        // One bit
+        let items = [1, 1];
+        let total = items.iter().sum();
+        assert_float_absolute_eq!(get_entropy(items.iter().map(|v| *v), total), 1.0);
+    }
+
+    #[test]
+    fn entropy_extreme() {
+        // When does it stop being meaningful?
+        let items = [30000, 1];
+        let total = items.iter().sum();
+        let items2 = [30, 1];
+        let total2 = items2.iter().sum();
+        assert_gt!(
+            get_entropy(items2.iter().map(|v| *v), total2),
+            get_entropy(items.iter().map(|v| *v), total),
+        );
+    }
+    
+    #[test]
+    fn entropy_precision() {
+        // How precise can we go?
+        // Compare same total, to eliminate the influence of the final `/ total`.
+        let items = [30001, 1];
+        let total = items.iter().sum();
+        let items2 = [30000, 2];
+        let total2 = items2.iter().sum();
+        assert_gt!(
+            get_entropy(items2.iter().map(|v| *v), total2),
+            get_entropy(items.iter().map(|v| *v), total),
+        );
+    }
+
+    #[test]
+    fn entropy_precision2() {
+        // How precise can we go?
+        // Compare counts so similar that they make little difference.
+        let items = [30001, 1001];
+        let total = items.iter().sum();
+        let items2 = [30000, 1002];
+        let total2 = items2.iter().sum();
+        assert_gt!(
+            get_entropy(items2.iter().map(|v| *v), total2),
+            get_entropy(items.iter().map(|v| *v), total),
+        );
+        // HOW DOES THIS EVEN PASS? This method is so naive!
+        // Scoop:
+        // [crates/wfc_3d/src/lib.rs:264] weights.map(|w| w * (log_total - log2(w))).sum::<usize>() = 5010
+        // [crates/wfc_3d/src/lib.rs:264] weights.map(|w| w * (log_total - log2(w))).sum::<usize>() = 5005
+    }
+
 }
