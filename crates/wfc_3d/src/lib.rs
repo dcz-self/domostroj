@@ -11,6 +11,7 @@ use baustein::world::FlatPaddedGridCuboid;
 use float_ord::FloatOrd;
 use std::cmp;
 use std::collections::HashMap;
+use std::fmt;
 use std::hash::{ Hash, Hasher };
 use std::marker::PhantomData;
 
@@ -136,6 +137,17 @@ impl<'a, V, Shape, S> cmp::Eq for ViewStamp<'a, Shape, S>
     S: Space<Voxel=V> + 'a,
 {}
 
+impl<'a, V, Shape, S> fmt::Debug for ViewStamp<'a, Shape, S>
+where
+    V: fmt::Debug + Copy,
+    Shape: ConstShape,
+    S: Space<Voxel=V> + 'a,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        (self.offset, self.get_samples()).fmt(f)
+    }
+}
+
 /// This should be enough for all relevant voxel types: 256.
 /// If more is actually used, this should represent categories,
 /// and another pass of generation used for specializing them.
@@ -203,21 +215,11 @@ where
     Shape: ConstShape,
     StampShape: ConstShape,
 {
-    let end_stamp_corner: Index =
-        cuboid.get_beyond_opposite_corner()
-        - VoxelUnits(usize_to_i32_arr(<StampShape as ConstShape>::ARRAY));
-    let mut counts: HashMap<ViewStamp<StampShape, FP<Shape>>, usize>
-        = HashMap::new();
-    cuboid.visit_indices(|idx| {
-        if idx.x() < end_stamp_corner.x()
-            && idx.y() < end_stamp_corner.y()
-            && idx.z() < end_stamp_corner.z()
-        {
-            let stamp = ViewStamp::<StampShape, FP<Shape>>::new(cuboid, idx);
-            *counts.entry(stamp).or_insert(0) += 1;
-        }
-    });
-    counts
+    let views = cuboid
+        .get_stamps_extent::<StampShape>()
+        .iter()
+        .map(|idx| ViewStamp::<StampShape, FP<Shape>>::new(cuboid, idx));
+    popcount(views)
 }
 
 // A bitmap is used because the set of items inside
@@ -342,7 +344,7 @@ fn find_lowest_entropy<'a, Shape, StampShape, const C: u8>(
 mod test {
     use super::*;
     use assert_float_eq::*;
-    use baustein::re::ConstPow2Shape;
+    use baustein::re::{ ConstAnyShape, ConstPow2Shape };
     use more_asserts::*;
 
     #[derive(Copy, Clone)]
@@ -360,13 +362,39 @@ mod test {
 
     #[test]
     fn stamps() {
-        type Shape = ConstPow2Shape<3, 3, 3>;
-        type StampShape = ConstPow2Shape<1, 1, 1>;
+        type Shape = ConstAnyShape<8, 8, 8>;
+        type StampShape = ConstAnyShape<2, 2, 2>;
         let world = FlatPaddedGridCuboid::<VoxelId, Shape>::new([0, 0, 0].into());
         let stamps = gather_stamps::<_, StampShape>(&world, Wrapping);
         assert_eq!(stamps.len(), 1);
-        assert_eq!(stamps.into_values().collect::<Vec<_>>(), vec![6*6*6]);
+        assert_eq!(stamps.into_values().collect::<Vec<_>>(), vec![7*7*7]);
     }
+
+    #[test]
+    fn stamps2() {
+        type Shape = ConstAnyShape<4, 4, 4>;
+        type StampShape = ConstAnyShape<2, 2, 2>;
+        let world = FlatPaddedGridCuboid::<VoxelId, Shape>::new([0, 0, 0].into());
+
+        let extent = FlatPaddedGridCuboid::<(), Shape>::new([0, 0, 0].into());
+        // Split into 2 areas
+        let world = extent.map_index(|i, _| {
+            if i.y() < 2 { 1 }
+            else { 0 }
+        });
+        let world: FlatPaddedGridCuboid<u8, Shape> = world.into();
+        
+        let stamps = gather_stamps::<_, StampShape>(&world, Wrapping);
+        assert_eq!(dbg!(&stamps).len(), 3);
+        // all 1
+        assert_eq!(stamps.get(&ViewStamp::new(&world, [0, 0, 0].into())).map(|x| *x), Some(3*3));
+        // bottom 1, top 0
+        assert_eq!(stamps.get(&ViewStamp::new(&world, [0, 1, 0].into())).map(|x| *x), Some(3*3));
+        // all 0
+        assert_eq!(stamps.get(&ViewStamp::new(&world, [0, 2, 0].into())).map(|x| *x), Some(3*3));
+    }
+
+
 
     #[test]
     fn log() {
