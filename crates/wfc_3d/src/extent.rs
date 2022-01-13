@@ -58,7 +58,28 @@ impl<V, Shape> Stamped for FlatPaddedGridCuboid<V, Shape>
         Extent {
             start: self.get_offset(),
             end: self.get_beyond_opposite_corner()
-                - VoxelUnits(usize_to_i32_arr(<StampShape as ConstShape>::ARRAY)),
+                - VoxelUnits(usize_to_i32_arr(<StampShape as ConstShape>::ARRAY))
+                + VoxelUnits([1, 1, 1].into()),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use baustein::re::{ConstAnyShape, ConstPow2Shape};
+
+    #[test]
+    fn edge() {
+        type Cuboid<V> = FlatPaddedGridCuboid<V, ConstAnyShape<4, 4, 4>>;
+        let mut cube = Cuboid::<()>::new([0, 0, 0].into());
+        let stamp_extent = cube.get_stamps_extent::<ConstAnyShape<2, 2, 2>>();
+        stamp_extent.iter()
+            .for_each(|i| {
+                cube.set(i, ()).unwrap();
+                cube.set(i + VoxelUnits([1, 1, 1].into()), ()).unwrap();
+            });
+        assert_eq!(stamp_extent.iter().count(), 3*3*3);
     }
 }
