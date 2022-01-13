@@ -233,8 +233,8 @@ where
 /// The dimension count is needed to be able to distinguish the case
 /// where only one option remains.
 // Storage is a bit mask
-// where a set bit marks a missing value.
-#[derive(Clone, Copy, Default)]
+// where a set bit marks a disallowed value.
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
 struct Superposition<const DIMENSIONS: u8>(u64);
 
 impl<const D: u8> Superposition<D> {
@@ -243,6 +243,9 @@ impl<const D: u8> Superposition<D> {
     /// Everything excluded; use as a mask.
     fn impossible() -> Self {
         Self(((D as u64) << 2) - 1)
+    }
+    fn only(v: VoxelId) -> Self {
+        Self(Self::impossible().0 & !(1 << (v as u64)))
     }
     fn allows(&self, v: VoxelId) -> bool {
         (self.0 & (1 << (v as u64))) == 0
@@ -298,16 +301,63 @@ fn log2(v: usize) -> usize {
 /// Superposition type
 type FPC<S, const C: u8> = FlatPaddedGridCuboid<Superposition<C>, S>;
 /// Stamp type
-type VS<'a, StampShape, Shape> = ViewStamp<'a, StampShape, FlatPaddedGridCuboid<VoxelId, Shape>>;
-/// Superposition stamp template
-type SS<'a, StampShape, Shape, const C: u8> = ViewStamp<'a, StampShape, FlatPaddedGridCuboid<Superposition<C>, Shape>>;
+type ST<'a, StampShape, Shape> = ViewStamp<'a, StampShape, FlatPaddedGridCuboid<VoxelId, Shape>>;
+/// Superposition view template
+type SV<'a, StampShape, Shape, const C: u8> = ViewStamp<'a, StampShape, FlatPaddedGridCuboid<Superposition<C>, Shape>>;
+
+
+
+fn get_distribution<'a, 's, 't: 'a, SShape, TShape, StampShape, const C: u8> (
+    superposition: &'a SV<'s, StampShape, SShape, C>,
+    stamps: &'t [(ST<'t, StampShape, TShape>, usize)],
+) -> Option<(impl Iterator<Item=(&'t ST<'t, StampShape, TShape>, usize)> + 'a, usize)>
+    where
+    StampShape: ConstShape,
+    SShape: ConstShape,
+    TShape: ConstShape,
+{
+    // TODO: this is the same work twice. Optimization potential.
+    let total = stamps.iter()
+        .filter(|(stamp, _occurrences)| superposition.allows(stamp))
+        .map(|(_stamp, occurrences)| occurrences)
+        .sum();
+    // Not special-casing 1 allowed combination.
+    // Entropy calculation reliably reaches 0 then.
+    if total == 0 {
+        None
+    } else {
+        // Cheaper than collecting the iterator: this doesn't allocate.
+        //let copy = superposition.clone();
+        let occurrences = stamps.iter()
+            .filter(|(stamp, _occurrences)| superposition.allows(stamp))
+            .map(|(stamp, occurrences)| (stamp, *occurrences));
+        Some((occurrences, total))
+    }
+}
+
+
+fn get_superposition_entropy<'s, 't, SShape, TShape, StampShape, const C: u8> (
+    superposition: &SV<'s, StampShape, SShape, C>,
+    stamps: &[(ST<'t, StampShape, TShape>, usize)],
+) -> Option<f32>
+    where
+    StampShape: ConstShape,
+    SShape: ConstShape,
+    TShape: ConstShape,
+{
+    get_distribution(superposition, stamps)
+        .map(|(occurrences, total)| get_entropy(
+            occurrences.map(|(_stamp, occurrences)| occurrences),
+            total,
+        ))
+}
 
 /// Returns the index of the template that has the lowest entropy
 /// in relation to possible stamp choices,
 /// or None if all are either undefined or 0.
 fn find_lowest_entropy<'a, Shape, StampShape, const C: u8>(
     wave: &FPC<Shape, C>,
-    stamps: &[(VS<'a, StampShape, Shape>, usize)],
+    stamps: &[(ST<'a, StampShape, Shape>, usize)],
 ) -> Option<Index>
     where
     Shape: ConstShape,
@@ -316,7 +366,7 @@ fn find_lowest_entropy<'a, Shape, StampShape, const C: u8>(
     wave
         .get_stamps_extent::<StampShape>()
         .iter()
-        .map(|i| SS::<StampShape, Shape, C>::new(wave, i))
+        .map(|i| SV::<StampShape, Shape, C>::new(wave, i))
         .map(|template| {
             // TODO: this is the same work twice. Optimization potential.
             let total = stamps.iter()
@@ -374,8 +424,7 @@ mod test {
     fn stamps2() {
         type Shape = ConstAnyShape<4, 4, 4>;
         type StampShape = ConstAnyShape<2, 2, 2>;
-        let world = FlatPaddedGridCuboid::<VoxelId, Shape>::new([0, 0, 0].into());
-
+        
         let extent = FlatPaddedGridCuboid::<(), Shape>::new([0, 0, 0].into());
         // Split into 2 areas
         let world = extent.map_index(|i, _| {
@@ -481,4 +530,49 @@ mod test {
         // [crates/wfc_3d/src/lib.rs:264] weights.map(|w| w * (log_total - log2(w))).sum::<usize>() = 5005
     }
 
+    #[test]
+    fn superposition_lowest_entropy() {
+        type Shape = ConstAnyShape<4, 4, 4>;
+        type StampShape = ConstAnyShape<2, 2, 2>;
+
+        let extent = FlatPaddedGridCuboid::<(), Shape>::new([0, 0, 0].into());
+        // Split into 2 areas
+        let world = extent.map_index(|i, _| {
+            if i.y() < 2 { 1 }
+            else { 0 }
+        });
+        let world: FlatPaddedGridCuboid<u8, Shape> = world.into();
+        let stamps: Vec<_>
+            = gather_stamps::<_, StampShape>(&world, Wrapping)
+            .into_iter()
+            .collect();
+    
+        let extent = FlatPaddedGridCuboid::<(), Shape>::new([0, 0, 0].into());
+        // Corner will be the only one constrained in any way
+        let world = extent.map_index(|i, _| {
+            if i == [0,0,0].into() { Superposition::only(1) }
+            else { Superposition::FREE }
+        });
+        let world: FlatPaddedGridCuboid<Superposition<2>, Shape> = world.into();
+
+        let s = |i: [i32; 3]| {
+            ViewStamp::<StampShape, _>::new(&world, i.into())
+        };
+        let gd = |i: [i32; 3]| {
+            let e = s(i);
+            get_distribution(&e, &stamps)
+                .map(|(d, t)| (d.collect::<Vec<_>>(), t))
+        };
+
+        dbg!(gd([0, 0, 0]));
+        dbg!(gd([1, 0, 0]));
+        dbg!(gd([1, 1, 1]));
+
+        dbg!(get_superposition_entropy(&ViewStamp::<StampShape, _>::new(&world, [0, 0, 0].into()), &stamps));
+        dbg!(get_superposition_entropy(&ViewStamp::<StampShape, _>::new(&world, [1, 0, 0].into()), &stamps));
+        dbg!(get_superposition_entropy(&ViewStamp::<StampShape, _>::new(&world, [1, 1, 1].into()), &stamps));
+        panic!()
+        //let lowest = find_lowest_entropy(&world, &stamps);
+        //assert_eq!(lowest, Some([0, 0, 0].into()));
+    }
 }
