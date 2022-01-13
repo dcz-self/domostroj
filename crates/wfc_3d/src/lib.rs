@@ -187,7 +187,7 @@ impl<V: Default, P: Palette<V>> Default for PaletteVoxel<V, P> {
     }
 }
 
-type FP<V, P, S> = FlatPaddedGridCuboid<PaletteVoxel<V, P>, S>;
+type FP<S> = FlatPaddedGridCuboid<VoxelId, S>;
 
 /// Wrapping modes: 
 struct Wrapping;
@@ -195,27 +195,25 @@ struct Wrapping;
 /// Returns all stamps fitting within the cuboid,
 /// given wrapping modes.
 /// Stamps are of a static size. Not sure if that's the best idea.
-fn gather_stamps<V, Shape, StampShape, P>(
-    cuboid: &FP<V, P, Shape>,
+fn gather_stamps<Shape, StampShape>(
+    cuboid: &FP<Shape>,
     wrapping: Wrapping,
-) -> HashMap<ViewStamp<StampShape, FP<V, P, Shape>>, usize>
+) -> HashMap<ViewStamp<StampShape, FP<Shape>>, usize>
 where
-    V: Copy + Default + Hash,
     Shape: ConstShape,
     StampShape: ConstShape,
-    P: Palette<V> + Copy,
 {
     let end_stamp_corner: Index =
         cuboid.get_beyond_opposite_corner()
         - VoxelUnits(usize_to_i32_arr(<StampShape as ConstShape>::ARRAY));
-    let mut counts: HashMap<ViewStamp<StampShape, FP<V, P, Shape>>, usize>
+    let mut counts: HashMap<ViewStamp<StampShape, FP<Shape>>, usize>
         = HashMap::new();
     cuboid.visit_indices(|idx| {
         if idx.x() < end_stamp_corner.x()
             && idx.y() < end_stamp_corner.y()
             && idx.z() < end_stamp_corner.z()
         {
-            let stamp = ViewStamp::<StampShape, FP<V, P, Shape>>::new(cuboid, idx);
+            let stamp = ViewStamp::<StampShape, FP<Shape>>::new(cuboid, idx);
             *counts.entry(stamp).or_insert(0) += 1;
         }
     });
@@ -362,11 +360,10 @@ mod test {
 
     #[test]
     fn stamps() {
-        type Voxel = PaletteVoxel::<u16, DumbPalette>;
         type Shape = ConstPow2Shape<3, 3, 3>;
         type StampShape = ConstPow2Shape<1, 1, 1>;
-        let world = FlatPaddedGridCuboid::<Voxel, Shape>::new([0, 0, 0].into());
-        let stamps = gather_stamps::<_, _, StampShape, _>(&world, Wrapping);
+        let world = FlatPaddedGridCuboid::<VoxelId, Shape>::new([0, 0, 0].into());
+        let stamps = gather_stamps::<_, StampShape>(&world, Wrapping);
         assert_eq!(stamps.len(), 1);
         assert_eq!(stamps.into_values().collect::<Vec<_>>(), vec![6*6*6]);
     }
