@@ -29,7 +29,7 @@ pub(crate) fn to_u32_arr(a: [i32; 3]) -> [u32; 3] {
     [a[0] as u32, a[1] as u32, a[2] as u32]
 }
 
-pub(crate) fn to_usize_arr(a: [i32; 3]) -> [usize; 3] {
+pub fn to_usize_arr(a: [i32; 3]) -> [usize; 3] {
     [a[0] as usize, a[1] as usize, a[2] as usize]
 }
 
@@ -146,6 +146,13 @@ impl ops::Sub<VoxelUnits> for WorldIndex {
     type Output = WorldIndex;
     fn sub(self, s: VoxelUnits) -> Self::Output {
         WorldIndex(self.0 - IVec3::from(s.0))
+    }
+}
+
+impl ops::Sub<WorldIndex> for WorldIndex {
+    type Output = VoxelUnits;
+    fn sub(self, s: WorldIndex) -> Self::Output {
+        VoxelUnits((self.0 - IVec3::from(s.0)).into())
     }
 }
 

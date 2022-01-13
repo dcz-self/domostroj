@@ -230,7 +230,6 @@ impl IterableSpace for Extent {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::prefab::World;
     use crate::world::FlatPaddedCuboid;
     
     fn t<S: Space<Voxel=()> + Extent + IterableSpace>(s: &S) {

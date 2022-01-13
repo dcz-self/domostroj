@@ -1,3 +1,9 @@
+/*
+ * SPDX-License-Identifier: LGPL-3.0-or-later
+ */
+
+mod extent;
+
 use baustein::indices::{ usize_to_i32_arr, Index, VoxelUnits };
 use baustein::re::ConstShape;
 use baustein::traits::Space;
@@ -10,6 +16,7 @@ use std::marker::PhantomData;
 
 
 use baustein::traits::{Extent, IterableSpace};
+use extent::Stamped;
 
 
 fn popcount<T: Hash + Eq>(i: impl Iterator<Item=T>) -> HashMap<T, usize> {
@@ -73,7 +80,7 @@ impl<'a, Shape, S, const C: u8> ViewStamp<'a, Shape, S>
     Shape: ConstShape,
     S: Space<Voxel=Superposition<C>> + 'a,
 {
-    fn allows<U>(&self, stamp: ViewStamp<Shape, U>) -> bool
+    fn allows<U>(&self, stamp: &ViewStamp<Shape, U>) -> bool
         where U: Space<Voxel=VoxelId>
     {
         for i in 0..Shape::SIZE {
@@ -83,6 +90,20 @@ impl<'a, Shape, S, const C: u8> ViewStamp<'a, Shape, S>
             }
         }
         return true;
+    }
+}
+
+impl<'a, Shape, S> Clone for ViewStamp<'a, Shape, S>
+    where
+    Shape: ConstShape,
+    S: Space + 'a,
+{
+    fn clone(&self) -> Self {
+        Self {
+            space: self.space,
+            offset: self.offset,
+            shape: Default::default(),
+        }
     }
 }
 
@@ -293,26 +314,29 @@ fn find_lowest_entropy<'a, Shape, StampShape, const C: u8>(
     StampShape: ConstShape,
 {
     wave
-        .enumerate()
+        .get_stamps_extent::<StampShape>()
+        .iter()
         .map(|i| SS::<StampShape, Shape, C>::new(wave, i))
-        .map(|template| (
-            template.offset,
+        .map(|template| {
             // TODO: this is the same work twice. Optimization potential.
-            stamps.iter()
-                .filter(|(stamp, _occurrences)| template.allows(stamp))
-                .map(|(_stamp, occurrences)| occurrences),
-            stamps.iter()
+            let total = stamps.iter()
                 .filter(|(stamp, _occurrences)| template.allows(stamp))
                 .map(|(_stamp, occurrences)| occurrences)
-                .sum(),
-        ))
+                .sum();
+            // Cheaper than collecting the iterator: this doesn't allocate.
+            let copy = template.clone();
+            let occurrences = stamps.iter()
+                .filter(move |(stamp, _occurrences)| copy.allows(stamp))
+                .map(|(_stamp, occurrences)| *occurrences);
+            (template, occurrences, total)
+        })
         // Undefined entropy
-        .filter(|(_i, _occurrences, total)| total =! 0)
-        .map(|(i, occurrences, total)| (i, FloatOrd(get_entropy(occurrences, total))))
-        .filter(|(_i, entropy)| entropy != 0)
+        .filter(|(_i, _occurrences, total)| *total != 0)
+        .map(|(t, occurrences, total)| (t.offset, get_entropy(occurrences, total)))
+        .filter(|(_i, entropy)| *entropy != 0.0)
         // This can't be solved by a clever ordering of the tuple like Python does,
         // because Index is not orderable, and by design.
-        .min_by_key(|(_index, entropy)| entropy)
+        .min_by_key(|(_index, entropy)| FloatOrd(*entropy))
         .map(|(index, _entropy)| index)
 }
 
