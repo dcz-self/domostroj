@@ -255,7 +255,11 @@ impl<const D: u8> Superposition<D> {
     }
 }
 
-/// Calculates Shannon entropy of weighted options multiplied by total weight.
+/// Calculates Shannon entropy-ish
+/// of weighted options multiplied by total weight.
+///
+/// Probabilities don't have to add up to 1, so this is not strict entropy calculation.
+/// See following comments.
 ///
 /// Shannon entropy (in natural units):
 ///
@@ -286,7 +290,7 @@ impl<const D: u8> Superposition<D> {
 /// Problems:
 /// - the number of occurrences can't be more than usize::MAX / 2, or log() will flop.
 /// - total = 0, or any item results in a panic.
-fn get_entropy(weights: impl Iterator<Item=usize>, total: usize) -> f32 {
+fn get_pseudo_entropy(weights: impl Iterator<Item=usize>, total: usize) -> f32 {
     let log_total = log2(total);
     weights
         .map(|w| w * (log_total - log2(w)))
@@ -310,54 +314,62 @@ type SV<'a, StampShape, Shape, const C: u8> = ViewStamp<'a, StampShape, FlatPadd
 fn get_distribution<'a, 's, 't: 'a, SShape, TShape, StampShape, const C: u8> (
     superposition: &'a SV<'s, StampShape, SShape, C>,
     stamps: &'t [(ST<'t, StampShape, TShape>, usize)],
-) -> Option<(impl Iterator<Item=(&'t ST<'t, StampShape, TShape>, usize)> + 'a, usize)>
+) -> impl Iterator<Item=(&'t ST<'t, StampShape, TShape>, usize)> + 'a
     where
     StampShape: ConstShape,
     SShape: ConstShape,
     TShape: ConstShape,
 {
-    // TODO: this is the same work twice. Optimization potential.
-    let total = stamps.iter()
+    stamps.iter()
         .filter(|(stamp, _occurrences)| superposition.allows(stamp))
-        .map(|(_stamp, occurrences)| occurrences)
-        .sum();
-    // Not special-casing 1 allowed combination.
-    // Entropy calculation reliably reaches 0 then.
-    if total == 0 {
-        None
-    } else {
-        // Cheaper than collecting the iterator: this doesn't allocate.
-        //let copy = superposition.clone();
-        let occurrences = stamps.iter()
-            .filter(|(stamp, _occurrences)| superposition.allows(stamp))
-            .map(|(stamp, occurrences)| (stamp, *occurrences));
-        Some((occurrences, total))
-    }
+        .map(|(stamp, occurrences)| (stamp, *occurrences))
 }
 
-
-fn get_superposition_entropy<'s, 't, SShape, TShape, StampShape, const C: u8> (
+/// This calculates the "entropy" of a certain stamp in the wave (`superposition`).
+/// Shannon entropy is calculated based on possible outcomes,
+/// so in case of a world with all stamps coming with the same probability,
+/// all positions in the wave would always have the same entropy,
+/// because they weigh allowed options equally.
+/// Entropy comes out the same for 2 or 3 equal options:
+///
+/// E(1/3, 1/3, 1/3) == E(1/2, 1/2).
+///
+/// This is not necessarily realistic for an actual template in use,
+/// but it indicates that a better heuristic than entropy can be achieved.
+///
+/// This heuristic implements a similar measure to entropy,
+/// except the probabilities don't need to add up to 1.
+/// Instead of normalizing probabilities, we naively erase them.
+/// As a result, in the case of 3 equal stamps,
+/// the wave position that can accommodate 2 of them
+/// is lower entropy than the one which can accommodate all 3.
+///
+/// PE(1/3, 1/3, 1/3) > PE(1/3, 1/3).
+fn get_superposition_pseudo_entropy<'s, 't, SShape, TShape, StampShape, const C: u8> (
     superposition: &SV<'s, StampShape, SShape, C>,
     stamps: &[(ST<'t, StampShape, TShape>, usize)],
-) -> Option<f32>
+    total: usize,
+) -> f32
     where
     StampShape: ConstShape,
     SShape: ConstShape,
     TShape: ConstShape,
 {
-    get_distribution(superposition, stamps)
-        .map(|(occurrences, total)| get_entropy(
-            occurrences.map(|(_stamp, occurrences)| occurrences),
-            total,
-        ))
+    // Should this return Option::None if there are no allowed states?
+    get_pseudo_entropy(
+        get_distribution(superposition, stamps)
+            .map(|(_stamp, occurrences)| occurrences),
+        total,
+    )
 }
 
 /// Returns the index of the template that has the lowest entropy
 /// in relation to possible stamp choices,
 /// or None if all are either undefined or 0.
-fn find_lowest_entropy<'a, Shape, StampShape, const C: u8>(
+fn find_lowest_pseudo_entropy<'a, Shape, StampShape, const C: u8>(
     wave: &FPC<Shape, C>,
     stamps: &[(ST<'a, StampShape, Shape>, usize)],
+    total: usize,
 ) -> Option<Index>
     where
     Shape: ConstShape,
@@ -367,25 +379,11 @@ fn find_lowest_entropy<'a, Shape, StampShape, const C: u8>(
         .get_stamps_extent::<StampShape>()
         .iter()
         .map(|i| SV::<StampShape, Shape, C>::new(wave, i))
-        .map(|template| {
-            // TODO: this is the same work twice. Optimization potential.
-            let total = stamps.iter()
-                .filter(|(stamp, _occurrences)| template.allows(stamp))
-                .map(|(_stamp, occurrences)| occurrences)
-                .sum();
-            // Cheaper than collecting the iterator: this doesn't allocate.
-            let copy = template.clone();
-            let occurrences = stamps.iter()
-                .filter(move |(stamp, _occurrences)| copy.allows(stamp))
-                .map(|(_stamp, occurrences)| *occurrences);
-            (template, occurrences, total)
-        })
-        // Undefined entropy
-        .filter(|(_i, _occurrences, total)| *total != 0)
-        .map(|(t, occurrences, total)| (t.offset, get_entropy(occurrences, total)))
-        .filter(|(_i, entropy)| *entropy != 0.0)
-        // This can't be solved by a clever ordering of the tuple like Python does,
-        // because Index is not orderable, and by design.
+        .map(|template| (
+            template.offset,
+            get_superposition_pseudo_entropy(&template, stamps, total)
+        ))
+        .filter(|(_index, entropy)| entropy != 0.0)
         .min_by_key(|(_index, entropy)| FloatOrd(*entropy))
         .map(|(index, _entropy)| index)
 }
@@ -462,11 +460,11 @@ mod test {
     fn entropy() {
         let items = [30, 1];
         let total = items.iter().sum();
-        assert_ne!(get_entropy(items.iter().map(|v| *v), total), 0.0);
+        assert_ne!(get_pseudo_entropy(items.iter().map(|v| *v), total), 0.0);
         // How extreme can we get?
         let items = [30000, 1];
         let total = items.iter().sum();
-        assert_ne!(get_entropy(items.iter().map(|v| *v), total), 0.0);
+        assert_ne!(get_pseudo_entropy(items.iter().map(|v| *v), total), 0.0);
     }
 
     #[test]
@@ -474,7 +472,7 @@ mod test {
         // Nothing.
         let items = [5];
         let total = items.iter().sum();
-        assert_eq!(get_entropy(items.iter().map(|v| *v), total), 0.0);
+        assert_eq!(get_pseudo_entropy(items.iter().map(|v| *v), total), 0.0);
     }
 
     #[test]
@@ -482,7 +480,7 @@ mod test {
         // One bit
         let items = [1, 1];
         let total = items.iter().sum();
-        assert_float_absolute_eq!(get_entropy(items.iter().map(|v| *v), total), 1.0);
+        assert_float_absolute_eq!(get_pseudo_entropy(items.iter().map(|v| *v), total), 1.0);
     }
 
     #[test]
@@ -493,8 +491,8 @@ mod test {
         let items2 = [30, 1];
         let total2 = items2.iter().sum();
         assert_gt!(
-            get_entropy(items2.iter().map(|v| *v), total2),
-            get_entropy(items.iter().map(|v| *v), total),
+            get_pseudo_entropy(items2.iter().map(|v| *v), total2),
+            get_pseudo_entropy(items.iter().map(|v| *v), total),
         );
     }
     
@@ -507,8 +505,8 @@ mod test {
         let items2 = [30000, 2];
         let total2 = items2.iter().sum();
         assert_gt!(
-            get_entropy(items2.iter().map(|v| *v), total2),
-            get_entropy(items.iter().map(|v| *v), total),
+            get_pseudo_entropy(items2.iter().map(|v| *v), total2),
+            get_pseudo_entropy(items.iter().map(|v| *v), total),
         );
     }
 
@@ -521,13 +519,26 @@ mod test {
         let items2 = [30000, 1002];
         let total2 = items2.iter().sum();
         assert_gt!(
-            get_entropy(items2.iter().map(|v| *v), total2),
-            get_entropy(items.iter().map(|v| *v), total),
+            get_pseudo_entropy(items2.iter().map(|v| *v), total2),
+            get_pseudo_entropy(items.iter().map(|v| *v), total),
         );
         // HOW DOES THIS EVEN PASS? This method is so naive!
         // Scoop:
         // [crates/wfc_3d/src/lib.rs:264] weights.map(|w| w * (log_total - log2(w))).sum::<usize>() = 5010
         // [crates/wfc_3d/src/lib.rs:264] weights.map(|w| w * (log_total - log2(w))).sum::<usize>() = 5005
+    }
+
+    #[test]
+    fn pseudo_entropy_equal() {
+        let items = [1, 1];
+        // fudging to suss out the difference between 2 and 3 allowed states remaining
+        let total = 3;
+        let items2 = [1, 1, 1];
+        let total2 = items2.iter().sum();
+        assert_gt!(
+            get_pseudo_entropy(items2.iter().map(|v| *v), total2),
+            get_pseudo_entropy(items.iter().map(|v| *v), total),
+        );
     }
 
     #[test]
@@ -559,20 +570,20 @@ mod test {
             ViewStamp::<StampShape, _>::new(&world, i.into())
         };
         let gd = |i: [i32; 3]| {
-            let e = s(i);
-            get_distribution(&e, &stamps)
-                .map(|(d, t)| (d.collect::<Vec<_>>(), t))
+            get_distribution(&s(i), &stamps)
+                .collect::<Vec<_>>()
         };
 
         dbg!(gd([0, 0, 0]));
         dbg!(gd([1, 0, 0]));
         dbg!(gd([1, 1, 1]));
 
-        dbg!(get_superposition_entropy(&ViewStamp::<StampShape, _>::new(&world, [0, 0, 0].into()), &stamps));
-        dbg!(get_superposition_entropy(&ViewStamp::<StampShape, _>::new(&world, [1, 0, 0].into()), &stamps));
-        dbg!(get_superposition_entropy(&ViewStamp::<StampShape, _>::new(&world, [1, 1, 1].into()), &stamps));
-        panic!()
-        //let lowest = find_lowest_entropy(&world, &stamps);
-        //assert_eq!(lowest, Some([0, 0, 0].into()));
+        let total: usize = stamps.iter().map(|(_s, v)| *v).sum();
+
+        dbg!(get_superposition_pseudo_entropy(&s([0, 0, 0]), &stamps, total));
+        dbg!(get_superposition_pseudo_entropy(&s([1, 0, 0]), &stamps, total));
+        dbg!(get_superposition_pseudo_entropy(&s([1, 1, 1]), &stamps, total));
+        let lowest = find_lowest_pseudo_entropy(&world, &stamps, total);
+        assert_eq!(lowest, Some([0, 0, 0].into()));
     }
 }
