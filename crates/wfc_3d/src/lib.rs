@@ -16,7 +16,6 @@ use std::hash::{ Hash, Hasher };
 use std::marker::PhantomData;
 
 
-use baustein::traits::{Extent, IterableSpace};
 use extent::Stamped;
 
 
@@ -325,6 +324,16 @@ fn get_distribution<'a, 's, 't: 'a, SShape, TShape, StampShape, const C: u8> (
         .map(|(stamp, occurrences)| (stamp, *occurrences))
 }
 
+#[derive(Debug, Clone, Copy)]
+enum PseudoEntropy {
+    /// No possible choices
+    Impossible,
+    /// Exactly one possible choice
+    Collapsed,
+    /// Multiple possible choices, meaningful value
+    Open(f32)
+}
+
 /// This calculates the "entropy" of a certain stamp in the wave (`superposition`).
 /// Shannon entropy is calculated based on possible outcomes,
 /// so in case of a world with all stamps coming with the same probability,
@@ -349,18 +358,24 @@ fn get_superposition_pseudo_entropy<'s, 't, SShape, TShape, StampShape, const C:
     superposition: &SV<'s, StampShape, SShape, C>,
     stamps: &[(ST<'t, StampShape, TShape>, usize)],
     total: usize,
-) -> f32
+) -> PseudoEntropy
     where
     StampShape: ConstShape,
     SShape: ConstShape,
     TShape: ConstShape,
 {
-    // Should this return Option::None if there are no allowed states?
-    get_pseudo_entropy(
-        get_distribution(superposition, stamps)
-            .map(|(_stamp, occurrences)| occurrences),
-        total,
-    )
+    let possibilities_count = get_distribution(superposition, stamps).count();
+    if possibilities_count == 0 {
+        PseudoEntropy::Impossible
+    } else if possibilities_count == 1 {
+        PseudoEntropy::Collapsed
+    } else {
+        PseudoEntropy::Open(get_pseudo_entropy(
+            get_distribution(superposition, stamps)
+                .map(|(_stamp, occurrences)| occurrences),
+            total,
+        ))
+    }
 }
 
 /// Returns the index of the template that has the lowest entropy
@@ -383,7 +398,10 @@ fn find_lowest_pseudo_entropy<'a, Shape, StampShape, const C: u8>(
             template.offset,
             get_superposition_pseudo_entropy(&template, stamps, total)
         ))
-        .filter(|(_index, entropy)| entropy != 0.0)
+        .filter_map(|(index, entropy)| match entropy {
+            PseudoEntropy::Open(value) => Some((index, value)),
+            _ => None,
+        })
         .min_by_key(|(_index, entropy)| FloatOrd(*entropy))
         .map(|(index, _entropy)| index)
 }
@@ -541,6 +559,7 @@ mod test {
         );
     }
 
+    /// This test fails on real entropy due to equal distribution of all stamps.
     #[test]
     fn superposition_lowest_entropy() {
         type Shape = ConstAnyShape<4, 4, 4>;
@@ -585,5 +604,52 @@ mod test {
         dbg!(get_superposition_pseudo_entropy(&s([1, 1, 1]), &stamps, total));
         let lowest = find_lowest_pseudo_entropy(&world, &stamps, total);
         assert_eq!(lowest, Some([0, 0, 0].into()));
+    }
+
+    #[test]
+    fn superposition_collapsed_entropy() {
+        type Shape = ConstAnyShape<4, 4, 4>;
+        type StampShape = ConstAnyShape<1, 2, 1>;
+
+        let extent = FlatPaddedGridCuboid::<(), Shape>::new([0, 0, 0].into());
+        // Split into 2 areas
+        let world = extent.map_index(|i, _| {
+            if i.y() < 2 { 1 }
+            else { 0 }
+        });
+        let world: FlatPaddedGridCuboid<u8, Shape> = world.into();
+        let stamps: Vec<_>
+            = gather_stamps::<_, StampShape>(&world, Wrapping)
+            .into_iter()
+            .collect();
+    
+        let extent = FlatPaddedGridCuboid::<(), Shape>::new([0, 0, 0].into());
+        // Corner is completely collapsed
+        let world = extent.map_index(|i, _| {
+            if i == [0,0,0].into() { Superposition::only(1) }
+            else if i == [0,1,0].into() { Superposition::only(1) }
+            else { Superposition::FREE }
+        });
+        let world: FlatPaddedGridCuboid<Superposition<2>, Shape> = world.into();
+
+        let s = |i: [i32; 3]| {
+            ViewStamp::<StampShape, _>::new(&world, i.into())
+        };
+        let gd = |i: [i32; 3]| {
+            get_distribution(&s(i), &stamps)
+                .collect::<Vec<_>>()
+        };
+
+        dbg!(gd([0, 0, 0]));
+        dbg!(gd([0, 1, 0]));
+        dbg!(gd([1, 1, 1]));
+
+        let total: usize = stamps.iter().map(|(_s, v)| *v).sum();
+
+        dbg!(get_superposition_pseudo_entropy(&s([0, 0, 0]), &stamps, total));
+        dbg!(get_superposition_pseudo_entropy(&s([0, 1, 0]), &stamps, total));
+        dbg!(get_superposition_pseudo_entropy(&s([1, 1, 1]), &stamps, total));
+        let lowest = find_lowest_pseudo_entropy(&world, &stamps, total);
+        assert_eq!(lowest, Some([0, 1   , 0].into()));
     }
 }
