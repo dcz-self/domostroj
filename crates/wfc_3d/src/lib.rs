@@ -27,6 +27,10 @@ fn popcount<T: Hash + Eq>(i: impl Iterator<Item=T>) -> HashMap<T, usize> {
     })
 }
 
+type StampSpace<Shape> = FlatPaddedGridCuboid<VoxelId, Shape>;
+
+/// The collection of Stamps from a single source.
+///
 /// Currently stamps are just a &[ViewStamp] where each refers to a Space.
 /// Because a Space will usually have large dimensions,
 /// the each vertical slice of a ViewStamp is in a different cache line.
@@ -37,8 +41,41 @@ fn popcount<T: Hash + Eq>(i: impl Iterator<Item=T>) -> HashMap<T, usize> {
 /// This needs to get benchmarked:
 /// `perf stat` or https://stackoverflow.com/questions/49242919/profiling-cache-evicition
 /// https://stackoverflow.com/questions/18172353/how-to-catch-the-l3-cache-hits-and-misses-by-perf-tool-in-linux
-struct StampCollection;
+struct StampCollection<'a, StampShape: ConstShape, SourceShape: ConstShape>(
+    Vec<(ST<'a, StampShape, SourceShape>, usize)>,
+);
 
+impl<'a, StampShape: ConstShape, SourceShape: ConstShape> StampCollection<'a, StampShape, SourceShape> {
+    fn get_collapse_outcomes<S, const C: u8>(&'a self, view: &ViewStamp<StampShape, S>)
+        -> CollapseOutcomes<'a, StampShape, StampSpace<SourceShape>>
+    where
+        S: Space<Voxel=Superposition<C>>,
+    {
+        let matches = self.0.iter()
+            .map(|(stamp, _occurrences)| stamp)
+            .filter(|stamp| view.allows(stamp));
+        let mut outcome = CollapseOutcomes::None;
+        for stamp in matches {
+            match outcome {
+                CollapseOutcomes::None => {
+                    outcome = CollapseOutcomes::One(stamp);
+                },
+                CollapseOutcomes::One(_) => {
+                    outcome = CollapseOutcomes::Multiple;
+                    break;
+                },
+                _ => { unreachable!(); },
+            }
+        }
+        outcome
+    }
+}
+
+enum CollapseOutcomes<'a, Shape: ConstShape, S: Space> {
+    One(&'a ViewStamp<'a, Shape, S>),
+    None,
+    Multiple,
+}
 
 /// An index starting from 0
 #[derive(Copy, Clone)]
@@ -79,10 +116,14 @@ impl<'a, V, Shape, S> ViewStamp<'a, Shape, S>
 
     fn get_samples(&self) -> Vec<V> {
         let mut out = Vec::with_capacity(Shape::SIZE);
-        for i in 0..Shape::SIZE {
-            out.push(self.get(StampIndex(Shape::delinearize(i))));
-        }
+        self.visit_indices(|i| out.push(self.get(i)));
         out
+    }
+
+    fn visit_indices<F: FnMut(StampIndex)>(&self, mut f: F) {
+        for i in 0..Shape::SIZE {
+            f(StampIndex(Shape::delinearize(i)));
+        }
     }
 }
 
@@ -317,7 +358,7 @@ fn log2(v: usize) -> usize {
 /// Superposition type
 type FPC<S, const C: u8> = FlatPaddedGridCuboid<Superposition<C>, S>;
 /// Stamp type
-type ST<'a, StampShape, Shape> = ViewStamp<'a, StampShape, FlatPaddedGridCuboid<VoxelId, Shape>>;
+type ST<'a, StampShape, Shape> = ViewStamp<'a, StampShape, StampSpace<Shape>>;
 /// Superposition view template
 type SV<'a, StampShape, Shape, const C: u8> = ViewStamp<'a, StampShape, FlatPaddedGridCuboid<Superposition<C>, Shape>>;
 

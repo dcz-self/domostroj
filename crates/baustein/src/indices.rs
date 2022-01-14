@@ -46,6 +46,12 @@ impl Into<IVec3> for VoxelUnits {
     }
 }
 
+impl From<[i32; 3]> for VoxelUnits {
+    fn from(v: [i32; 3]) -> Self {
+        Self(v)
+    }
+}
+
 /// Delberately not public inside,
 /// to be able to replace it in the future with a chunk+voxel combo
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

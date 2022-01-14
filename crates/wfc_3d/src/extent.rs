@@ -20,6 +20,8 @@ pub struct Extent {
 }
 
 impl Extent {
+    /// `end` lies **beyond the opposite corner**,
+    /// i.e. corner_voxel = end - [1, 1, 1]
     pub fn new(start: Index, end: Index) -> Self {
         if start.x() < end.x()
             && start.y() < end.y()
@@ -123,7 +125,7 @@ impl Stamped for Extent {
 mod test {
     use super::*;
 
-    use baustein::re::{ConstAnyShape, ConstPow2Shape};
+    use baustein::re::ConstAnyShape;
 
     #[test]
     fn edge() {
