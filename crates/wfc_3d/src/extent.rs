@@ -8,7 +8,7 @@ use baustein::world::FlatPaddedGridCuboid;
 use std::cmp;
 
 // used traits
-use baustein::traits::Extent as _;
+use baustein::traits::Cuboid;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Extent {

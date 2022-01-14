@@ -82,8 +82,8 @@ impl<E, F> IterableSpace for Map<E, F>
     }
 }
 
-impl<S, F> Extent for Map<S, F>
-    where S: Extent
+impl<S, F> Cuboid for Map<S, F>
+    where S: Cuboid
 {
     fn get_offset(&self) -> Index {
         self.space.get_offset()
@@ -117,8 +117,8 @@ impl<E, F> IterableSpace for MapIndex<E, F>
     }
 }
 
-impl<S, F> Extent for MapIndex<S, F>
-    where S: Extent
+impl<S, F> Cuboid for MapIndex<S, F>
+    where S: Cuboid
 {
     fn get_offset(&self) -> Index {
         self.space.get_offset()
@@ -155,8 +155,8 @@ impl<E, F> IterableSpace for Zip<E, F>
 }
 
 // FIXME: this also ignores second space.
-impl<S, T> Extent for Zip<S, T>
-    where S: Extent
+impl<S, T> Cuboid for Zip<S, T>
+    where S: Cuboid
 {
     fn get_offset(&self) -> Index {
         self.left.get_offset()
@@ -191,7 +191,7 @@ impl<T> IterableSpace for &T
 
 /// For structures which can cheaply tell the corners
 /// between which all their voxels lie
-pub trait Extent {
+pub trait Cuboid {
     /// The corner with lowest indices in each dimension
     fn get_offset(&self) -> Index;
     /// The size in each direction
@@ -202,8 +202,8 @@ pub trait Extent {
     }
 }
 
-impl<T> Extent for &T
-    where T: Extent
+impl<T> Cuboid for &T
+    where T: Cuboid
 {
     fn get_offset(&self) -> Index {
         (*self).get_offset()
@@ -215,7 +215,7 @@ impl<T> Extent for &T
 }
 
 /*
-impl IterableSpace for Extent {
+impl IterableSpace for Cuboid {
     fn visit_indices<F: FnMut(Index)>(&self, f: F) {
         let start = self.get_offset();
         let end = self.get_beyond_opposite_corner();
@@ -232,7 +232,7 @@ mod test {
     use super::*;
     use crate::world::FlatPaddedCuboid;
     
-    fn t<S: Space<Voxel=()> + Extent + IterableSpace>(s: &S) {
+    fn t<S: Space<Voxel=()> + Cuboid + IterableSpace>(s: &S) {
         let s: FlatPaddedCuboid<_> = s.zip(s)
             .zip(s)
             .into();

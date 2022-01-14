@@ -37,7 +37,7 @@ use std::sync::mpsc::Receiver;
 use std::thread;
 
 
-use baustein::traits::Extent;
+use baustein::traits::Cuboid as Extent;
 use bevy::prelude::IntoSystem;
 use bevy::prelude::ParallelSystemDescriptorCoercion;
 

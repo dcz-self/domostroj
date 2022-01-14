@@ -26,7 +26,7 @@ use feldspar::prelude::{ create_voxel_mesh_bundle, spawn_array_material, ArrayMa
 use crate::generate::World;
 
 // Used traits
-use baustein::traits::Extent;
+use baustein::traits::Cuboid as Extent;
 use bevy::prelude::IntoSystem;
 
 
