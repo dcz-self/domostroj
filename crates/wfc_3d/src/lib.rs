@@ -303,7 +303,7 @@ impl<const D: u8> Superposition<D> {
     const FREE: Self = Self(0);
     /// Everything excluded; use as a mask.
     fn impossible() -> Self {
-        Self(((D as u64) << 2) - 1)
+        Self((1 << (D as u64)) - 1)
     }
     fn only(v: VoxelId) -> Self {
         Self(Self::impossible().0 & !(1 << (v as u64)))
