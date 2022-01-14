@@ -4,7 +4,7 @@
 /*! Wave containers.
  */
 
-use crate::Superposition;
+use crate::{Superposition, VoxelId};
 use crate::extent::Extent;
 use crate::stamp::{CollapseOutcomes, StampCollection, ViewStamp};
 
@@ -19,11 +19,22 @@ use baustein::traits::Cuboid;
 
 /// Doesn't do anything special for you. Just a dumb container.
 /// Like all waves, it handles propagating collapses.
-struct Naive<S: ConstShape, const C: u8> {
+pub struct Naive<S: ConstShape, const C: u8> {
     world: FlatPaddedGridCuboid<Superposition<C>, S>,
 }
 
 impl<S: ConstShape, const C: u8> Naive<S, C> {
+    pub fn new<StampShape: ConstShape, SourceShape: ConstShape>(
+        world: FlatPaddedGridCuboid<Superposition<C>, S>,
+        stamps: &StampCollection<StampShape, SourceShape>,
+    ) -> Self {
+        let mut new = Self { world };
+        // `world` is not constrained in any way, so before forcing collapse,
+        // let's try to follow the constraints it already sets.
+        new.collapse(&new.get_extent(), &stamps);
+        new
+    }
+
     fn get_offset(&self) -> Index {
         self.world.get_offset()
     }
@@ -32,6 +43,10 @@ impl<S: ConstShape, const C: u8> Naive<S, C> {
     }
     fn get_extent(&self) -> Extent {
         Extent::new(self.get_offset(), self.get_beyond_opposite_corner())
+    }
+
+    pub fn get_world(&self) -> &FlatPaddedGridCuboid<Superposition<C>, S> {
+        &self.world
     }
 
     fn get(&self, index: Index) -> Superposition<C> {
@@ -65,33 +80,50 @@ impl<S: ConstShape, const C: u8> Naive<S, C> {
         stamps: &StampCollection<StampShape, SourceShape>,
     ) -> Result<(), OutOfBounds> {
         //if self.get(
-        todo!()
+        // FIXME
+        self.set(index, value, stamps)
+    }
+
+    pub fn limit_stamp<StampShape: ConstShape, SourceSpace: Space<Voxel=VoxelId>, SourceShape: ConstShape>(
+        &mut self,
+        index: Index,
+        stamp: &ViewStamp<StampShape, SourceSpace>,
+        stamps: &StampCollection<StampShape, SourceShape>,
+    ) -> Result<(), OutOfBounds> {
+        stamp.visit_indices(|stamp_index| {
+            let voxel = stamp.get(stamp_index);
+            let new = Superposition::<C>::only(voxel);
+            let index = index + VoxelUnits(usize_to_i32_arr(stamp_index.0));
+            if new != self.get(index) {
+                println!("Collapsing {:?} to {}", index, voxel);
+                self.limit(index, new, stamps)?;
+            }
+            Ok(())
+        })
     }
 
     /// Propagates collapse. Totally naive approach, depth-first.
-    fn collapse<StampShape: ConstShape, SourceShape: ConstShape>(
+    pub fn collapse<StampShape: ConstShape, SourceShape: ConstShape>(
         &mut self,
         extent: &Extent,
         stamps: &StampCollection<StampShape, SourceShape>,
     ) {
-        for index in extent.iter() {
+        let stamp_extent = self.get_extent().get_stamps_extent::<StampShape>();
+        for index in extent.intersection(&stamp_extent).iter() {
             let collapse = {
                 let view = ViewStamp::<StampShape, _>::new(&self.world, index);
                 stamps.get_collapse_outcomes(&view)
             };
             if let CollapseOutcomes::One(stamp) = collapse {
-                stamp.visit_indices(|stamp_index| {
-                    let voxel = stamp.get(stamp_index);
-                    let new = Superposition::<C>::only(voxel);
-                    let index = index + VoxelUnits(usize_to_i32_arr(stamp_index.0));
-                    if new != self.get(index) {
-                        println!("Collapsing {:?} to {}", index, voxel);
-                        // This can only fail if the collapsing exceeds bounds.
-                        self.set(index, new, stamps).unwrap();
-                    }
-                });
+                // This can only fail if the stamp is out of bounds,
+                // but we check it.
+                self.limit_stamp(index, stamp, stamps).unwrap();
             }
         }
+    }
+
+    pub fn into_space(self) -> FlatPaddedGridCuboid<Superposition<C>, S> {
+        self.world
     }
 }
 

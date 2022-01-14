@@ -7,7 +7,7 @@ mod extent;
 mod stamp;
 mod wave;
 
-use crate::stamp::{gather_stamps, ST, ViewStamp, Wrapping};
+use crate::stamp::{gather_stamps, StampCollection, StampSpace, ST, ViewStamp, Wrapping};
 use baustein::indices::Index;
 use baustein::re::ConstShape;
 use baustein::traits::Space;
@@ -84,7 +84,7 @@ impl<V: Default, P: Palette<V>> Default for PaletteVoxel<V, P> {
 // Storage is a bit mask
 // where a set bit marks a disallowed value.
 #[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
-struct Superposition<const DIMENSIONS: u8>(u64);
+pub struct Superposition<const DIMENSIONS: u8>(u64);
 
 impl<const D: u8> Superposition<D> {
     /// Nothing excluded
@@ -228,13 +228,14 @@ fn get_superposition_pseudo_entropy<'s, 't, SShape, TShape, StampShape, const C:
 /// Returns the index of the template that has the lowest entropy
 /// in relation to possible stamp choices,
 /// or None if all are either undefined or 0.
-fn find_lowest_pseudo_entropy<'a, Shape, StampShape, const C: u8>(
+fn find_lowest_pseudo_entropy<'a, Shape, SourceShape, StampShape, const C: u8>(
     wave: &FPC<Shape, C>,
-    stamps: &[(ST<'a, StampShape, Shape>, usize)],
+    stamps: &[(ST<'a, StampShape, SourceShape>, usize)],
     total: usize,
 ) -> Option<Index>
     where
     Shape: ConstShape,
+    SourceShape: ConstShape,
     StampShape: ConstShape,
 {
     wave
@@ -251,6 +252,65 @@ fn find_lowest_pseudo_entropy<'a, Shape, StampShape, const C: u8>(
         })
         .min_by_key(|(_index, entropy)| FloatOrd(*entropy))
         .map(|(index, _entropy)| index)
+}
+
+/// Always chooses the allowed stamp with the most occurrences.
+fn find_preferred_stamp<'a, StampShape, SourceShape, WS, const D: u8>(
+    wave_view: ViewStamp<StampShape, WS>,
+    stamps: &'a StampCollection<'a, StampShape, SourceShape>,
+) -> &'a ST<'a, StampShape, SourceShape>
+    where
+    StampShape: ConstShape,
+    SourceShape: ConstShape,
+    WS: Space<Voxel=Superposition<D>>,
+{
+    &stamps
+        .get_distribution().iter()
+        .filter(|(stamp, _occurrences)| wave_view.allows(stamp))
+        .max_by_key(|(_stamp, occurrences)| occurrences)
+        .unwrap() // If stamp collection is empty, something went very wrong.
+        .0
+}
+
+pub type SuperpositionSpace<Shape, const D: u8> = FlatPaddedGridCuboid<Superposition<D>, Shape>;
+
+/// Example of actual usage.
+///
+/// `template` is the concrete space which you want to imitate, converted using a palette to `VoxelId`s.
+/// `wrapping` is unused.
+/// `seed` is the starting superposition space. It should contain something in there, to aid the initial collapse.
+///
+/// The collapse point selection algorithm is super naive, so no seed is rather discouraged.
+pub fn execute<SourceShape, OutcomeShape, StampShape, const D: u8> (
+    template: &StampSpace<SourceShape>,
+    wrapping: Wrapping,
+    mut seed: SuperpositionSpace<OutcomeShape, D>,
+) -> SuperpositionSpace<OutcomeShape, D>
+    where
+    SourceShape: ConstShape,
+    OutcomeShape: ConstShape,
+    StampShape: ConstShape,
+{
+    let stamps = StampCollection::<StampShape, _>::from_iter(gather_stamps(template, wrapping));
+    let mut wave = wave::Naive::new(seed, &stamps);
+    loop {
+        let candidate = find_lowest_pseudo_entropy(
+            wave.get_world(),
+            stamps.get_distribution(),
+            stamps.get_total_occurrences(),
+        );
+        if let Some(index) = candidate {
+            let stamp = find_preferred_stamp(
+                ViewStamp::new(&wave.get_world(), index),
+                &stamps,
+            );
+            // Trigger collapse
+            wave.limit_stamp(index, &stamp, &stamps).unwrap();
+        } else {
+            // Nothing to collapse any more.
+            return wave.into_space();
+        }
+    }
 }
 
 #[cfg(test)]

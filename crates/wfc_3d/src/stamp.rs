@@ -25,7 +25,7 @@ pub struct Wrapping;
 
 /// The dafault space used for stamps.
 /// `FlatPaddedGridCuboid` is just an array in memory, which should make it fast.
-type StampSpace<Shape> = FlatPaddedGridCuboid<VoxelId, Shape>;
+pub type StampSpace<Shape> = FlatPaddedGridCuboid<VoxelId, Shape>;
 /// Stamp type
 pub type ST<'a, StampShape, Shape> = ViewStamp<'a, StampShape, StampSpace<Shape>>;
 
@@ -66,17 +66,30 @@ fn popcount<T: Hash + Eq>(i: impl Iterator<Item=T>) -> HashMap<T, usize> {
 /// This needs to get benchmarked:
 /// `perf stat` or https://stackoverflow.com/questions/49242919/profiling-cache-evicition
 /// https://stackoverflow.com/questions/18172353/how-to-catch-the-l3-cache-hits-and-misses-by-perf-tool-in-linux
-pub struct StampCollection<'a, StampShape: ConstShape, SourceShape: ConstShape>(
-    Vec<(ST<'a, StampShape, SourceShape>, usize)>,
-);
+pub struct StampCollection<'a, StampShape: ConstShape, SourceShape: ConstShape>{
+    stamps: Vec<(ST<'a, StampShape, SourceShape>, usize)>,
+    total: usize,
+}
 
 impl<'a, StampShape: ConstShape, SourceShape: ConstShape> StampCollection<'a, StampShape, SourceShape> {
     pub fn new(stamps: Vec<(ST<'a, StampShape, SourceShape>, usize)>) -> Self {
-        Self(stamps)
+        let total = stamps.iter().map(|(_s, v)| *v).sum();
+        Self {
+            stamps,
+            total,
+        }
     }
 
-    fn get_total_occurrences(&self) -> usize {
-        self.0.iter().map(|(_s, v)| *v).sum()
+    pub fn from_iter(it: impl IntoIterator<Item=(ST<'a, StampShape, SourceShape>, usize)>) -> Self {
+        Self::new(it.into_iter().collect())
+    }
+
+    pub fn get_total_occurrences(&self) -> usize {
+        self.total
+    }
+
+    pub fn get_distribution(&self) -> &[(ST<'a, StampShape, SourceShape>, usize)] {
+        &self.stamps
     }
 
     pub fn get_collapse_outcomes<S, const C: u8>(&'a self, view: &ViewStamp<StampShape, S>)
@@ -84,7 +97,7 @@ impl<'a, StampShape: ConstShape, SourceShape: ConstShape> StampCollection<'a, St
     where
         S: Space<Voxel=Superposition<C>>,
     {
-        let matches = self.0.iter()
+        let matches = self.stamps.iter()
             .map(|(stamp, _occurrences)| stamp)
             .filter(|stamp| view.allows(stamp));
         let mut outcome = CollapseOutcomes::None;
@@ -149,14 +162,18 @@ impl<'a, V, Shape, S> ViewStamp<'a, Shape, S>
 
     fn get_samples(&self) -> Vec<V> {
         let mut out = Vec::with_capacity(Shape::SIZE);
-        self.visit_indices(|i| out.push(self.get(i)));
+        let r: Result<(), ()> = self.visit_indices(|i| Ok(out.push(self.get(i))));
+        r.unwrap();
         out
     }
 
-    pub fn visit_indices<F: FnMut(StampIndex)>(&self, mut f: F) {
+    pub fn visit_indices<E, F>(&self, mut f: F) -> Result<(), E>
+        where F: FnMut(StampIndex) -> Result<(), E>
+    {
         for i in 0..Shape::SIZE {
-            f(StampIndex(Shape::delinearize(i)));
+            f(StampIndex(Shape::delinearize(i)))?;
         }
+        Ok(())
     }
 }
 
