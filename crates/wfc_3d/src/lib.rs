@@ -3,6 +3,7 @@
  */
 
 mod extent;
+mod wave;
 
 use baustein::indices::{ usize_to_i32_arr, Index, VoxelUnits };
 use baustein::re::ConstShape;
@@ -25,6 +26,18 @@ fn popcount<T: Hash + Eq>(i: impl Iterator<Item=T>) -> HashMap<T, usize> {
         map
     })
 }
+
+/// Currently stamps are just a &[ViewStamp] where each refers to a Space.
+/// Because a Space will usually have large dimensions,
+/// the each vertical slice of a ViewStamp is in a different cache line.
+/// If stamps are few, it might be faster to put their voxels in a single cache line
+/// by keeping each in a contiguous buffer.
+/// If stamps are small and they are iterated consecutively (they usually are),
+/// try keeping them all in a single large buffer.
+/// This needs to get benchmarked:
+/// `perf stat` or https://stackoverflow.com/questions/49242919/profiling-cache-evicition
+/// https://stackoverflow.com/questions/18172353/how-to-catch-the-l3-cache-hits-and-misses-by-perf-tool-in-linux
+struct StampCollection;
 
 
 /// An index starting from 0
@@ -410,7 +423,7 @@ fn find_lowest_pseudo_entropy<'a, Shape, StampShape, const C: u8>(
 mod test {
     use super::*;
     use assert_float_eq::*;
-    use baustein::re::{ ConstAnyShape, ConstPow2Shape };
+    use baustein::re::ConstAnyShape;
     use more_asserts::*;
 
     #[derive(Copy, Clone)]
