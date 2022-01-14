@@ -46,6 +46,14 @@ struct StampCollection<'a, StampShape: ConstShape, SourceShape: ConstShape>(
 );
 
 impl<'a, StampShape: ConstShape, SourceShape: ConstShape> StampCollection<'a, StampShape, SourceShape> {
+    fn new(stamps: Vec<(ST<'a, StampShape, SourceShape>, usize)>) -> Self {
+        Self(stamps)
+    }
+
+    fn get_total_occurrences(&self) -> usize {
+        self.0.iter().map(|(_s, v)| *v).sum()
+    }
+
     fn get_collapse_outcomes<S, const C: u8>(&'a self, view: &ViewStamp<StampShape, S>)
         -> CollapseOutcomes<'a, StampShape, StampSpace<SourceShape>>
     where
@@ -287,7 +295,7 @@ where
 /// where only one option remains.
 // Storage is a bit mask
 // where a set bit marks a disallowed value.
-#[derive(Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
 struct Superposition<const DIMENSIONS: u8>(u64);
 
 impl<const D: u8> Superposition<D> {
