@@ -1,7 +1,7 @@
 /*! Stuff related to the world generator and its UI.
  *
  Based on bevy example source. */
-
+mod collapse;
 pub mod render;
 mod scene;
 
