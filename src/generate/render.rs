@@ -1,4 +1,4 @@
-/*!
+/*
  * SPDX-License-Identifier: LGPL-3.0-or-later
  */
 use baustein::indices::{to_i32_arr, VoxelUnits};
@@ -23,7 +23,8 @@ use block_mesh;
 use block_mesh::{ greedy_quads, GreedyQuadsBuffer, MergeVoxel, UnorientedQuad, RIGHT_HANDED_Y_UP_CONFIG };
 use feldspar::prelude::{ create_voxel_mesh_bundle, spawn_array_material, ArrayMaterial, VoxelRenderAssets};
 
-use crate::generate::World;
+use crate::generate::scene;
+use crate::generate::scene::{SceneShape, World};
 
 // Used traits
 use baustein::traits::Cuboid as Extent;
@@ -54,10 +55,49 @@ impl app::Plugin for Plugin {
 }
 
 // Older version needed for block_mesh
-type BlockMeshShape = block_mesh::ndshape::ConstPow2Shape3u32::<5, 5, 5>;
+type BlockMeshShape = SceneShape;
 
 /// Marks which meshes should despawn
 pub struct MeshTag;
+
+#[derive(Eq, Clone, Copy, Default, Debug)]
+struct Voxel(scene::Superposition);
+
+impl PartialEq for Voxel {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl MergeVoxel for Voxel {
+    type MergeValue = Self;
+    fn merge_value(&self) -> Self {
+        *self
+    }
+}
+
+impl block_mesh::Voxel for Voxel {
+    fn is_empty(&self) -> bool {
+        self.0.allows(scene::Voxel::Empty)
+    }
+    fn is_opaque(&self) -> bool {
+        !self.0.allows(scene::Voxel::Empty)
+    }
+}
+
+/// Shows only voxels that collapsed into solid.
+fn to_material_empty(v: Voxel) -> [u8; 4] {
+    use scene::Voxel::*;
+    if v.0.allows(Empty) {
+        [0; 4]
+    } else {
+        let f = |t| {
+            if v.0.allows(t) { 1 }
+            else { 0 }
+        };
+        [f(Grass), f(Concrete), f(Wood), f(Glass)]
+    }
+}
 
 pub fn update_meshes(
     mut commands: Commands,
@@ -72,15 +112,12 @@ pub fn update_meshes(
     }
     // And create the occupied ones again.
     // Wasteful, I know. I'm testing!
-    let space = &space.0;
-    type Shape = ConstPow2Shape<5, 5, 5>;
-    let space = FlatPaddedGridCuboid::<_, Shape>::new_from_space(&space, space.get_offset());
+    let space = space.0.map(|v| Voxel(v));
+    let space = FlatPaddedGridCuboid::<Voxel, SceneShape>::new_from_space(&space, space.get_offset());
     let quads = generate_greedy_buffer_fast(&space);
     let material_lookup = |quad: &UnorientedQuad| {
-        let i = space.get(space.get_offset() + VoxelUnits(to_i32_arr(quad.minimum))).0;
-        let mut material = [0; 4];
-        let i = i - 1; // 0 is empty
-        material[i as usize] = 1;
+        let v = space.get(space.get_offset() + VoxelUnits(to_i32_arr(quad.minimum)));
+        let material = to_material_empty(v);
         [material, material, material, material]
     };
     let mesh = mesh_from_quads(quads, &space, material_lookup);

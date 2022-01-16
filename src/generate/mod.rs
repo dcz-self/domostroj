@@ -336,19 +336,6 @@ pub fn floor() -> World {
 }
 
 
-struct Palette {}
-
-impl wfc::palette::Palette<PaletteVoxel> for Palette {
-    fn get(id: wfc::VoxelId) -> PaletteVoxel {
-        PaletteVoxel(id)
-    }
-    fn to_ref(v: PaletteVoxel) -> wfc::VoxelId {
-        v.0
-    }
-}
-
-type Superposition = wfc::palette::Superposition<PaletteVoxel, Palette, 5>;
-
 pub mod stress {
     use super::*;
 

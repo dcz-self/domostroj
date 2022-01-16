@@ -24,13 +24,24 @@ pub trait Palette<V> {
 /// The DIMENSIONS constant should ideally
 /// be dependent on the palette,
 /// but I haven't found a way to make it work.
-#[derive(Copy)]
+#[derive(Copy, Debug)]
 pub struct Superposition<V, P: Palette<V>, const DIMENSIONS: u8> {
     voxel: crate::Superposition<DIMENSIONS>,
     palette: PhantomData<P>,
     v: PhantomData<V>,
 }
 
+impl<V: Copy, P: Palette<V>, const D: u8> PartialEq
+    for Superposition<V, P, D>
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.voxel == other.voxel
+    }
+}
+
+impl<V: Copy, P: Palette<V>, const D: u8> Eq
+    for Superposition<V, P, D>
+{}
 
 impl<V, P: Palette<V>, const D: u8> Superposition<V, P, D> {
     pub fn free() -> Self {
@@ -40,6 +51,9 @@ impl<V, P: Palette<V>, const D: u8> Superposition<V, P, D> {
         (0..D)
             .filter(|id| self.voxel.allows(*id))
             .map(P::get)
+    }
+    pub fn allows(&self, v: V) -> bool {
+        self.voxel.allows(P::to_ref(v))
     }
 }
 

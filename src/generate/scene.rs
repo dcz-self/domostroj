@@ -3,14 +3,17 @@
  */
 use baustein::re::ConstAnyShape;
 use baustein::world::FlatPaddedGridCuboid;
+use block_mesh;
+use block_mesh::MergeVoxel;
 use wfc_3d as wfc;
 
 
 use baustein::traits::Space;
 use wfc_3d::palette::Palette as _;
 
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-enum Voxel {
+pub enum Voxel {
     Empty,
     Grass,
     Concrete,
@@ -24,18 +27,42 @@ impl Default for Voxel {
     }
 }
 
+impl MergeVoxel for Voxel {
+    type MergeValue = Self;
+    fn merge_value(&self) -> Self {
+        *self
+    }
+}
+
+impl block_mesh::Voxel for Voxel {
+    fn is_empty(&self) -> bool {
+        match self {
+            Voxel::Empty => true,
+            _ => false,
+        }
+    }
+    fn is_opaque(&self) -> bool {
+        match self {
+            Voxel::Empty => true,
+            _ => false,
+        }
+    }
+}
+
 /// 5 dimensions - 5 distinct voxel possibilities.
-type Superposition = wfc::palette::Superposition<Voxel, Palette, 5>;
+pub type Superposition = wfc::palette::Superposition<Voxel, Palette, 5>;
+
+pub type SceneShape = ConstAnyShape<64, 20, 64>;
 
 /// A wrapper over a mundane chunk, for the purpose of becoming the Bevy resource.
 #[derive(Clone)]
-pub struct World(FlatPaddedGridCuboid<Superposition, ConstAnyShape<64, 20, 64>>);
+pub struct World(pub FlatPaddedGridCuboid<Superposition, SceneShape>);
 
 /// Create a seed world with some collapse involved
 pub fn floor() -> World {
-    let extent = FlatPaddedGridCuboid::<(), ConstAnyShape<64, 20, 64>>::new([-32, -8, -32].into());
+    let extent = FlatPaddedGridCuboid::<(), SceneShape>::new([-32, -8, -32].into());
     use Voxel::*;
-    let world: FlatPaddedGridCuboid<Superposition, ConstAnyShape<64, 20, 64>>
+    let world: FlatPaddedGridCuboid<Superposition, SceneShape>
         = extent.map_index(|i, _| {
             if i == [0,1,0].into() { [Empty].as_slice().into() }
             else if i == [0,0,0].into() { [Grass].as_slice().into() }
@@ -46,8 +73,8 @@ pub fn floor() -> World {
 }
 
 /// Converts between wfc representation and the one for rendering.
-#[derive(Clone, Copy)]
-struct Palette {}
+#[derive(Clone, Copy, Debug)]
+pub struct Palette {}
 
 impl wfc::palette::Palette<Voxel> for Palette {
     fn get(id: wfc::VoxelId) -> Voxel {
