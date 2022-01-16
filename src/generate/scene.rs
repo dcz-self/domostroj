@@ -59,7 +59,7 @@ pub type SceneShape = ConstAnyShape<64, 20, 64>;
 pub struct World(pub FlatPaddedGridCuboid<Superposition, SceneShape>);
 
 /// Create a seed world with some collapse involved
-pub fn floor() -> World {
+pub fn seed() -> World {
     let extent = FlatPaddedGridCuboid::<(), SceneShape>::new([-32, -8, -32].into());
     use Voxel::*;
     let world: FlatPaddedGridCuboid<Superposition, SceneShape>

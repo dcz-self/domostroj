@@ -51,7 +51,7 @@ impl bevy::app::Plugin for Plugin {
     fn build(&self, app: &mut AppBuilder) {
         app
             .add_plugin(CameraPlugin)
-            .insert_resource(floor())
+            .insert_resource(scene::seed())
             ;
     }
 }
