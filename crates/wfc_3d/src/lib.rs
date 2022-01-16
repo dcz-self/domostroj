@@ -5,7 +5,7 @@
  */
 mod extent;
 pub mod palette;
-mod stamp;
+pub mod stamp;
 mod wave;
 
 use crate::stamp::{gather_stamps, StampCollection, StampSpace, ST, ViewStamp, Wrapping};
