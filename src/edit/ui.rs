@@ -1,3 +1,7 @@
+/*
+ * SPDX-License-Identifier: LGPL-3.0-or-later
+ */
+
 use baustein::indices::Index;
 use baustein::prefab::PaletteVoxel;
 use bevy::prelude::*;
