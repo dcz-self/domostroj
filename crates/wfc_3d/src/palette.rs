@@ -24,13 +24,18 @@ pub trait Palette<V> {
 /// The DIMENSIONS constant should ideally
 /// be dependent on the palette,
 /// but I haven't found a way to make it work.
+#[derive(Copy)]
 pub struct Superposition<V, P: Palette<V>, const DIMENSIONS: u8> {
     voxel: crate::Superposition<DIMENSIONS>,
     palette: PhantomData<P>,
     v: PhantomData<V>,
 }
 
+
 impl<V, P: Palette<V>, const D: u8> Superposition<V, P, D> {
+    pub fn free() -> Self {
+        crate::Superposition::FREE.into()
+    }
     pub fn iter_allowed<'a>(&'a self) -> impl Iterator<Item=V> + 'a {
         (0..D)
             .filter(|id| self.voxel.allows(*id))
@@ -48,6 +53,36 @@ impl<V, P: Palette<V>, const D: u8> From<crate::Superposition<D>>
             palette: Default::default(),
             v: Default::default(),
         }
+    }
+}
+
+impl<V: Copy, P: Palette<V>, const D: u8> From<&[V]>
+    for Superposition<V, P, D>
+{
+    fn from(voxels: &[V]) -> Self {
+        voxels.iter()
+            .map(|v| P::to_ref(*v))
+            .fold(
+                crate::Superposition::impossible(),
+                |s, v| s.add(v),
+            )
+            .into()
+    }
+}
+
+impl<V, P: Palette<V>, const D: u8> Default
+    for Superposition<V, P, D>
+{
+    fn default() -> Self {
+        crate::Superposition::FREE.into()
+    }
+}
+
+impl<V, P: Palette<V>, const D: u8> Clone
+    for Superposition<V, P, D>
+{
+    fn clone(&self) -> Self {
+        self.voxel.into()
     }
 }
 

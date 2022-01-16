@@ -3,6 +3,7 @@
  Based on bevy example source. */
 
 pub mod render;
+mod scene;
 
 use baustein;
 use baustein::prefab::{ PaletteIdChunk, PaletteVoxel };
@@ -343,7 +344,7 @@ impl wfc::palette::Palette<PaletteVoxel> for Palette {
     }
     fn to_ref(v: PaletteVoxel) -> wfc::VoxelId {
         v.0
-    } 
+    }
 }
 
 type Superposition = wfc::palette::Superposition<PaletteVoxel, Palette, 5>;

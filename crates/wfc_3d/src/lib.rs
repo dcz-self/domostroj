@@ -47,13 +47,16 @@ impl<const D: u8> Superposition<D> {
         Self((1 << (D as u64)) - 1)
     }
     fn only(v: VoxelId) -> Self {
-        Self(Self::impossible().0 & !(1 << (v as u64)))
+        Self::impossible().add(v)
     }
     fn allows(&self, v: VoxelId) -> bool {
         (self.0 & (1 << (v as u64))) == 0
     }
     fn count_allowed(&self) -> u8 {
         D - self.0.count_ones() as u8
+    }
+    fn add(self, id: VoxelId) -> Self {
+        Self(self.0 & !(1 << (id as u64)))
     }
 }
 
