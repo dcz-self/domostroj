@@ -1,6 +1,8 @@
 #[cfg(test)]
 #[macro_use]
 extern crate assert_float_eq;
+#[macro_use]
+extern crate rental;
 
 mod analyze;
 mod camera;
