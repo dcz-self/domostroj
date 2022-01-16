@@ -254,6 +254,6 @@ fn initialize_camera(mut commands: Commands, config: Res<Config>) {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+//    use super::*;
 
 }

@@ -4,6 +4,7 @@
 /*! This is an implementation of the wavefunction collapse algorithm in 3d.
  */
 mod extent;
+pub mod palette;
 mod stamp;
 mod wave;
 
@@ -13,8 +14,6 @@ use baustein::re::ConstShape;
 use baustein::traits::Space;
 use baustein::world::FlatPaddedGridCuboid;
 use float_ord::FloatOrd;
-use std::hash::{ Hash, Hasher };
-use std::marker::PhantomData;
 
 
 use crate::extent::Stamped;
@@ -23,53 +22,7 @@ use crate::extent::Stamped;
 /// This should be enough for all relevant voxel types: 256.
 /// If more is actually used, this should represent categories,
 /// and another pass of generation used for specializing them.
-type VoxelId = u8;
-
-/// Not instantiable. A mapping between u64 and an actual type of voxel.
-trait Palette<V> {
-    fn get(id: VoxelId) -> V;
-    fn default() -> VoxelId;
-}
-
-/// A voxel ID that can be resolved to the Voxel
-/// without storing extra memory.
-/// Probably premature, this blows up type signatures.
-#[derive(Copy, Clone, Debug)]
-struct PaletteVoxel<V, P: Palette<V>> {
-    id: VoxelId,
-    palette: PhantomData<(P, V)>,
-}
-
-/// The impls follow here to get rid of requiring them on PhantomData.
-/// Try removing those in favor of #[derive(...)] to see.
-impl<V, P: Palette<V>> PartialEq for PaletteVoxel<V, P> {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-    }
-}
-
-impl<V, P: Palette<V>> Eq for PaletteVoxel<V, P> {}
-
-impl<V, P: Palette<V>> Hash for PaletteVoxel<V, P> {
-    fn hash<H: Hasher>(&self, hasher: &mut H) {
-        self.id.hash(hasher)
-    }
-}
-
-impl<V: Copy, P: Palette<V>> PaletteVoxel<V, P> {
-    fn get(&self) -> V {
-        P::get(self.id)
-    }
-}
-
-impl<V: Default, P: Palette<V>> Default for PaletteVoxel<V, P> {
-    fn default() -> Self {
-        PaletteVoxel {
-            id: P::default(),
-            palette: Default::default(),
-        }
-    }
-}
+pub type VoxelId = u8;
 
 // A bitmap is used because the set of items inside
 // is close to the entire space of items.
@@ -319,19 +272,6 @@ mod test {
     use assert_float_eq::*;
     use baustein::re::ConstAnyShape;
     use more_asserts::*;
-
-    #[derive(Copy, Clone)]
-    struct DumbPalette;
-
-    impl Palette<u16> for DumbPalette {
-        fn get(id: VoxelId) -> u16 { id as u16 }
-        fn default() -> VoxelId { 0 }
-    }
-    #[test]
-    fn foo() {
-        let voxel = PaletteVoxel::<u16, DumbPalette>::default();
-        let _v: u16 = voxel.get();
-    }
 
     #[test]
     fn log() {

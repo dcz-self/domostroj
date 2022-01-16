@@ -21,11 +21,12 @@ bincode = "1.3"
 env_logger = "0.8"
 futures = "0.3"
 float-ord = "0.3"
-genawaiter = "0.99"
+#genawaiter = "0.99"
 log = "0.4"
 rfd = "0.6"
 ron = "0.6"
 serde = "1.0"
+wfc_3d = { path = "crates/wfc_3d" }
 
 [dependencies.bevy]
 version = "0.5"

@@ -56,7 +56,6 @@ use baustein::indices::{Neighbours6, NamedNeighbours6};
 use baustein::traits::{ Cuboid as Extent, IterableSpace, Space };
 use baustein::world::FlatPaddedCuboid;
 use float_ord::FloatOrd;
-use genawaiter::{rc::gen, yield_, Generator};
 use std::fmt;
 use std::ops;
 

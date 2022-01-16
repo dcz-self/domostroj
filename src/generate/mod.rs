@@ -23,6 +23,7 @@ use bevy::{
 };
 
 use bevy_egui;
+use wfc_3d as wfc;
 
 // used traits
 use baustein::traits::{ MutChunk, Space };
@@ -333,6 +334,19 @@ pub fn floor() -> World {
     World(world.into())
 }
 
+
+struct Palette {}
+
+impl wfc::palette::Palette<PaletteVoxel> for Palette {
+    fn get(id: wfc::VoxelId) -> PaletteVoxel {
+        PaletteVoxel(id)
+    }
+    fn to_ref(v: PaletteVoxel) -> wfc::VoxelId {
+        v.0
+    } 
+}
+
+type Superposition = wfc::palette::Superposition<PaletteVoxel, Palette, 5>;
 
 pub mod stress {
     use super::*;
