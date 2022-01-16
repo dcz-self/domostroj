@@ -4,6 +4,7 @@
 mod collapse;
 pub mod render;
 mod scene;
+//mod ui;
 
 use baustein;
 use baustein::prefab::{ PaletteIdChunk, PaletteVoxel };
@@ -24,6 +25,9 @@ use bevy::{
 };
 
 use bevy_egui;
+use std::sync::Mutex;
+use std::sync::mpsc;
+use std::sync::mpsc::Receiver;
 use wfc_3d as wfc;
 
 // used traits
@@ -49,12 +53,25 @@ pub struct Plugin;
 
 impl bevy::app::Plugin for Plugin {
     fn build(&self, app: &mut AppBuilder) {
+        let (ui_sender, ui_receiver) = mpsc::channel::<Event>();
         app
             .add_plugin(CameraPlugin)
             .insert_resource(scene::seed())
+            .insert_resource(Mutex::new(ui_sender))
+            .insert_resource(Mutex::new(ui_receiver))
+            /*.add_system_set(
+                SystemSet::on_enter(AppState::Done)
+                    .with_system(ui::process.system())
+            )*/
             ;
     }
 }
+
+pub enum Event {
+    StepOne,
+}
+
+pub struct Window(WindowId);
 
 // NOTE: this "state based" approach to multiple windows is a short term workaround.
 // Future Bevy releases shouldn't require such a strict order of operations.
@@ -66,6 +83,7 @@ enum AppState {
 }
 
 fn setup_window(
+    mut commands: Commands,
     mut app_state: ResMut<State<AppState>>,
     mut create_window_events: EventWriter<CreateWindow>,
 ) {
@@ -82,6 +100,7 @@ fn setup_window(
             ..Default::default()
         },
     });
+    commands.insert_resource(Window(window_id));
 
     app_state.set(AppState::Setup).unwrap();
 }
@@ -98,22 +117,23 @@ mod window {
 fn setup_pipeline(
     mut commands: Commands,
     windows: Res<Windows>,
+    window: Res<Window>,
     mut active_cameras: ResMut<ActiveCameras>,
     mut render_graph: ResMut<RenderGraph>,
     asset_server: Res<AssetServer>,
     msaa: Res<Msaa>,
     mut app_state: ResMut<State<AppState>>,
 ) {
-    // get the non-default window id
-    let window_id = windows
-        .iter()
-        .find(|w| w.id() != WindowId::default())
-        .map(|w| w.id());
+    // For some reason the first call doesn't run with a registered window,
+    // and crashes weirdly.
+    if let None
+        = windows.iter()
+            .find(|w| w.id() == window.0)
+    {
+        return;
+    }
 
-    let window_id = match window_id {
-        Some(window_id) => window_id,
-        None => return,
-    };
+    let window_id = window.0;
 
     // here we setup our render graph to draw our second camera to the new window's swap chain
 
