@@ -41,14 +41,15 @@ use baustein::traits::Cuboid as Extent;
 use bevy::prelude::IntoSystem;
 use bevy::prelude::ParallelSystemDescriptorCoercion;
 
+pub type Shape = ConstPow2Shape<5, 5, 5>;
 
 /// A wrapper over a mundane chunk, for the purpose of becoming the Bevy resource.
 #[derive(Clone)]
-pub struct World(FlatPaddedGridCuboid<PaletteVoxel, ConstPow2Shape<5, 5, 5>>);
+pub struct World(FlatPaddedGridCuboid<PaletteVoxel, Shape>);
 
 /// Create a default World with a grassy, diggable floor below level 0.
 pub fn floor() -> World {
-    let extent = FlatPaddedGridCuboid::<(), ConstPow2Shape<5, 5, 5>>::new([0, -8, 0].into());
+    let extent = FlatPaddedGridCuboid::<(), Shape>::new([0, -8, 0].into());
     let world = extent.map_index(|i, _| {
         if i.y() < 0 {
             PaletteVoxel(1) // hopefully grass
@@ -135,7 +136,6 @@ pub fn update_meshes(
         if i.y() < mesh_cutoff { v }
         else { Default::default() }
     });
-    type Shape = ConstPow2Shape<5, 5, 5>;
     let space = FlatPaddedGridCuboid::<_, Shape>::new_from_space(&space, space.get_offset());
     
     let quads = generate_greedy_buffer_fast(&space);
