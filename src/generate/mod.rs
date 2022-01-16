@@ -4,7 +4,7 @@
 mod collapse;
 pub mod render;
 mod scene;
-//mod ui;
+mod ui;
 
 use baustein;
 use baustein::prefab::{ PaletteIdChunk, PaletteVoxel };
@@ -59,10 +59,10 @@ impl bevy::app::Plugin for Plugin {
             .insert_resource(scene::seed())
             .insert_resource(Mutex::new(ui_sender))
             .insert_resource(Mutex::new(ui_receiver))
-            /*.add_system_set(
-                SystemSet::on_enter(AppState::Done)
+            .add_system_set(
+                SystemSet::on_update(AppState::Done)
                     .with_system(ui::process.system())
-            )*/
+            )
             ;
     }
 }
