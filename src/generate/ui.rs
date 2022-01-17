@@ -14,7 +14,7 @@ use std::thread;
 
 use crate::CursorRay;
 use crate::generate;
-use crate::generate::StampsSource;
+use crate::generate::{Generator, StampsSource};
 use crate::generate::collapse;
 use crate::generate::scene;
 
@@ -32,6 +32,7 @@ pub fn process(
     window_id: Res<generate::Window>,
     stamps: Res<StampsSource>,
     mut egui_ctx: ResMut<EguiContext>,
+    mut generation_state: ResMut<Generator>,
     //mut slice_state: ResMut<slice::State>,
     events: Res<Mutex<Sender<generate::Event>>>,
 ) {
@@ -41,7 +42,7 @@ pub fn process(
         Some(k) => k,
         None => {return;},
     };
-    let new_state = process_panel(ctx, &*stamps, old_state, &events);
+    let new_state = process_panel(ctx, &*stamps, old_state, &mut *generation_state, &events);
     if new_state != old_state {
         //*slice_state = new_state.slice_state;
     }
@@ -52,7 +53,8 @@ fn process_panel(
     egui_ctx: &egui::CtxRef,
     stamps: &StampsSource,
     mut ui_state: State,
-    mut events: &Sender<generate::Event>,
+    mut generation_state: &mut Generator,
+    events: &Sender<generate::Event>,
 ) -> State {
     egui::SidePanel::left("side_panel")
         .show(egui_ctx, |ui| {
@@ -64,6 +66,16 @@ fn process_panel(
             if ui.button("1 Step").clicked() {
                 events.send(generate::Event::StepOne).unwrap();
             }
+
+            match (*generation_state, stamps) {
+                (_, StampsSource::None) => {},
+                (Generator::Idle, _) => if ui.button("Run").clicked() {
+                    *generation_state = Generator::Running;
+                },
+                (Generator::Running, _) => if ui.button("Pause").clicked() {
+                    *generation_state = Generator::Idle;
+                },
+            };
 
             ui.heading("Stamp source");
             match stamps {

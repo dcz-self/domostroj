@@ -65,10 +65,12 @@ impl bevy::app::Plugin for Plugin {
             .insert_resource(Mutex::new(ui_sender))
             .insert_resource(Mutex::new(ui_receiver))
             .insert_resource(StampsSource::None)
+            .insert_resource(Generator::Idle)
             .add_system_set(
                 SystemSet::on_update(AppState::Done)
                     .with_system(ui::process.system())
                     .with_system(handle_events.system())
+                    .with_system(run_generator.system())
             )
             ;
     }
@@ -96,44 +98,7 @@ pub fn handle_events(
         for event in events.try_iter() {
             use Event::*;
             match event {
-                StepOne => match &*stamps {
-                    StampsSource::None => {},
-                    StampsSource::Present3x3x3(stamps) => {
-                        let mut wave = &mut world.0;
-                        // This should probably be relegated to another thread,
-                        // but the other thread still needs mutable access to the same world
-                        // that is being rendered and interacted with.
-                        // That means a copy-on-write world should be used,
-                        // because it lets the "base" reference read-only,
-                        // but until that happens, the only alternative is to copy the whole world.
-                        collapse::Stamps::rent(
-                            stamps,
-                            |stamps| {
-                                // This is kind of expensive,
-                                // but if we don't make sure all new collapses are resolved,
-                                // then the entropy finder is going to ignore them and cause nonsense results.
-                                if wave.collapse(&wave.get_extent(), stamps) == true {
-                                    return;
-                                }
-                                let candidate = wfc::find_lowest_pseudo_entropy(
-                                    wave.get_world(),
-                                    stamps.get_distribution(),
-                                    stamps.get_total_occurrences(),
-                                );
-                                println!("Stamp index: {:?}", candidate);
-                                if let Some(index) = candidate {
-                                    let stamp = wfc::find_preferred_stamp(
-                                        wfc::stamp::ViewStamp::new(&wave.get_world(), index),
-                                        &stamps,
-                                    );
-                                    println!("Stamp content: {:?}", stamp);
-                                    // Trigger collapse
-                                    wave.limit_stamp(index, &stamp, &stamps).unwrap();
-                                }
-                            },
-                        );
-                    },
-                },
+                StepOne => generator_step(&*source, &*stamps, &mut *world),
                 LoadStamps => {
                     let converted_source
                         = source.0
@@ -149,6 +114,70 @@ pub fn handle_events(
             }
         }
     }
+}
+
+#[derive(Clone, Copy)]
+pub enum Generator {
+    Running,
+    Idle,
+}
+
+pub fn run_generator(
+    source: Res<edit::World>,
+    stamps: Res<StampsSource>,
+    generator: Res<Generator>,
+    mut world: ResMut<scene::World>,
+) {
+    // Run every available frame. Don't care.
+    match &*generator {
+        Generator::Running => generator_step(&*source, &*stamps, &mut *world),
+        Generator::Idle => {},
+    }
+}
+
+fn generator_step(
+    source: &edit::World,
+    stamps: &StampsSource,
+    world: &mut scene::World,
+) {
+    match &*stamps {
+        StampsSource::None => {},
+        StampsSource::Present3x3x3(stamps) => {
+            let wave = &mut world.0;
+            // This should probably be relegated to another thread,
+            // but the other thread still needs mutable access to the same world
+            // that is being rendered and interacted with.
+            // That means a copy-on-write world should be used,
+            // because it lets the "base" reference read-only,
+            // but until that happens, the only alternative is to copy the whole world.
+            collapse::Stamps::rent(
+                stamps,
+                |stamps| {
+                    // This is kind of expensive,
+                    // but if we don't make sure all new collapses are resolved,
+                    // then the entropy finder is going to ignore them and cause nonsense results.
+                    if wave.collapse(&wave.get_extent(), stamps) == true {
+                        return;
+                    }
+                    let candidate = wfc::find_lowest_pseudo_entropy(
+                        wave.get_world(),
+                        stamps.get_distribution(),
+                        stamps.get_total_occurrences(),
+                    );
+                    println!("Stamp index: {:?}", candidate);
+                    if let Some(index) = candidate {
+                        let stamp = wfc::find_preferred_stamp(
+                            wfc::stamp::ViewStamp::new(&wave.get_world(), index),
+                            &stamps,
+                        );
+                        println!("Stamp content: {:?}", stamp);
+                        // Trigger collapse
+                        wave.limit_stamp(index, &stamp, &stamps).unwrap();
+                    }
+                },
+            );
+        },
+    };
 }
                     
 pub struct Window(WindowId);
