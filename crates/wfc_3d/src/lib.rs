@@ -115,17 +115,17 @@ type FPC<S, const C: u8> = FlatPaddedGridCuboid<Superposition<C>, S>;
 type SV<'a, StampShape, Shape, const C: u8> = ViewStamp<'a, StampShape, FlatPaddedGridCuboid<Superposition<C>, Shape>>;
 
 
-pub fn get_distribution<'a, 's, 't: 'a, SShape, TShape, StampShape, const C: u8> (
-    superposition: &'a SV<'s, StampShape, SShape, C>,
+pub fn get_distribution<'a, 's, 't: 'a, WS, TShape, StampShape, const D: u8> (
+    wave_view: &'a ViewStamp<StampShape, WS>,
     stamps: &'t [(ST<'t, StampShape, TShape>, usize)],
 ) -> impl Iterator<Item=(&'t ST<'t, StampShape, TShape>, usize)> + 'a
     where
     StampShape: ConstShape,
-    SShape: ConstShape,
     TShape: ConstShape,
+    WS: Space<Voxel=Superposition<D>>,
 {
     stamps.iter()
-        .filter(|(stamp, _occurrences)| superposition.allows(stamp))
+        .filter(|(stamp, _occurrences)| wave_view.allows(stamp))
         .map(|(stamp, occurrences)| (stamp, *occurrences))
 }
 
@@ -244,9 +244,8 @@ pub fn choose_stamp_weighted<'a, StampShape, SourceShape, WS, R, const D: u8>(
     R: SeedableRng + rand::RngCore, 
 {
     let weights: Vec<_>
-        = stamps
-            .get_distribution().iter()
-            .map(|(stamp_, occurrences)| *occurrences)
+        = get_distribution(&wave_view, stamps.get_distribution())
+            .map(|(stamp_, occurrences)| occurrences)
             .collect();
     let index = WeightedIndex::new(&weights).unwrap();
     

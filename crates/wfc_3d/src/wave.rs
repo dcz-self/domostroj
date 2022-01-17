@@ -104,7 +104,10 @@ impl<S: ConstShape, const C: u8> Naive<S, C> {
             let new = Superposition::<C>::only(voxel);
             let index = index + VoxelUnits(usize_to_i32_arr(stamp_index.0));
             if new != self.get(index) {
-                println!("Collapsing {:?} to {}", index, voxel);
+                eprintln!("Collapsing {:?} to {}", index, voxel);
+                if index == [0, 0, 0].into() {
+                    eprintln!("because {:?}", stamp.offset);
+                }
                 self.limit(index, new, stamps)?;
                 ret = true;
             }
@@ -125,6 +128,15 @@ impl<S: ConstShape, const C: u8> Naive<S, C> {
         for index in extent.intersection(&stamp_extent).iter() {
             let collapse = {
                 let view = ViewStamp::<StampShape, _>::new(&self.world, index);
+                //if index == [0, 0, 0].into()
+                if false {
+                    dbg!(&view);
+                    dbg!(crate::get_distribution(&view, stamps.get_distribution()).collect::<Vec<_>>());
+                    match stamps.get_collapse_outcomes(&view) {
+                        CollapseOutcomes::One(_) => eprintln!("one"),
+                        _ => eprintln!("not one"),
+                    };
+                }
                 stamps.get_collapse_outcomes(&view)
             };
             if let CollapseOutcomes::One(stamp) = collapse {
