@@ -43,6 +43,7 @@ The paper cuts:
 - Use a renderer pipeline that can draw more than 4 materials
 - Stop inefficiencies in rendering
 - Generate in one step
+- Show generation progress
 - Editing voxels in generator
 - Movable camera in generator
 - Select voxel in generator window

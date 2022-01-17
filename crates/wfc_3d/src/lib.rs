@@ -14,10 +14,12 @@ use baustein::re::ConstShape;
 use baustein::traits::Space;
 use baustein::world::FlatPaddedGridCuboid;
 use float_ord::FloatOrd;
+use rand::SeedableRng;
+use rand::distributions::WeightedIndex;
 
 
 use crate::extent::Stamped;
-
+use rand::distributions::Distribution;
 
 /// This should be enough for all relevant voxel types: 256.
 /// If more is actually used, this should represent categories,
@@ -227,6 +229,28 @@ pub fn find_preferred_stamp<'a, StampShape, SourceShape, WS, const D: u8>(
         .max_by_key(|(_stamp, occurrences)| occurrences)
         .unwrap() // If stamp collection is empty, something went very wrong.
         .0
+}
+
+/// Selects one possible stamp, taking into account its distribution compared to others.
+pub fn choose_stamp_weighted<'a, StampShape, SourceShape, WS, R, const D: u8>(
+    wave_view: ViewStamp<StampShape, WS>,
+    stamps: &'a StampCollection<'a, StampShape, SourceShape>,
+    rng: &mut R,
+) -> &'a ST<'a, StampShape, SourceShape>
+    where
+    StampShape: ConstShape,
+    SourceShape: ConstShape,
+    WS: Space<Voxel=Superposition<D>>,
+    R: SeedableRng + rand::RngCore, 
+{
+    let weights: Vec<_>
+        = stamps
+            .get_distribution().iter()
+            .map(|(stamp_, occurrences)| *occurrences)
+            .collect();
+    let index = WeightedIndex::new(&weights).unwrap();
+    
+    &stamps.get_distribution()[index.sample(rng)].0
 }
 
 pub type SuperpositionSpace<Shape, const D: u8> = FlatPaddedGridCuboid<Superposition<D>, Shape>;
