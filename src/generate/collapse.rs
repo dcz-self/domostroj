@@ -24,10 +24,10 @@ rental! {
     }
 }
 
-use stamps::Stamps;
+pub use stamps::Stamps;
 
 impl Stamps {
-    fn from(source: StampSpace<edit::Shape>) -> Stamps {
+    pub fn from_source(source: StampSpace<edit::Shape>) -> Stamps {
         Self::try_new(
             Box::new(source),
             |source| {

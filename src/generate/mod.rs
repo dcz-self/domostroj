@@ -6,6 +6,9 @@ pub mod render;
 mod scene;
 mod ui;
 
+use crate::edit;
+use crate::util::time;
+
 use baustein;
 use baustein::prefab::{ PaletteIdChunk, PaletteVoxel };
 use baustein::re::ConstPow2Shape;
@@ -59,18 +62,51 @@ impl bevy::app::Plugin for Plugin {
             .insert_resource(scene::seed())
             .insert_resource(Mutex::new(ui_sender))
             .insert_resource(Mutex::new(ui_receiver))
+            .insert_resource(StampsSource::None)
             .add_system_set(
                 SystemSet::on_update(AppState::Done)
                     .with_system(ui::process.system())
+                    .with_system(handle_events.system())
             )
             ;
     }
 }
 
-pub enum Event {
-    StepOne,
+pub enum StampsSource {
+    None,
+    Present3x3x3(collapse::Stamps),
 }
 
+pub enum Event {
+    StepOne,
+    LoadStamps,
+}
+
+pub fn handle_events(
+    source: Res<edit::World>,
+    mut stamps: ResMut<StampsSource>,
+    events: Res<Mutex<Receiver<Event>>>,
+) {
+    let events = events.try_lock();
+    if let Ok(events) = events {
+        for event in events.try_iter() {
+            use Event::*;
+            match event {
+                StepOne => { println!("Step stub"); },
+                LoadStamps => {
+                    let converted_source
+                        = source.0
+                        .map(|v| v.0 as wfc::VoxelId)
+                        .into();
+                    *stamps = StampsSource::Present3x3x3(time!(
+                        collapse::Stamps::from_source(converted_source)
+                    ));
+                }
+            }
+        }
+    }
+}
+                    
 pub struct Window(WindowId);
 
 // NOTE: this "state based" approach to multiple windows is a short term workaround.

@@ -1,56 +1,57 @@
 # Domostroj
 
-Voxel house editor and generator using the [feldspar](https://github.com/bonsairobo/feldspar) voxel plugin for
-[bevy](https://github.com/bevyengine/bevy).
+Voxel house editor and generator using [bevy](https://github.com/bevyengine/bevy).
 
-Forked off feldspar-editor.
+It's built on a 3D version of the [wave function collapse](https://github.com/mxgmn/WaveFunctionCollapse) algorithm.
 
-## Warning
+Forked off feldspar-editor by bonsairobo.
 
-This is very much a work in progress and very experimental. But we hope that eventually this will actually be
-useful for making games.
+## Status
+
+Works as a sandbox for the wave function collapse algorithm. Houses are not amazing yet.
+
+The stamp size is 3×3×3, and there are 4 materials (and empty) to choose from.
 
 ## Controls
 
+Only the editor window is interactive at first.
+
+Choose desired level with the slider, a material. and draw on the terrain with your mouse.
+
+Then, click "update stamps" in the generator, and push the generation using the "step one" button until the area is completely collapsed.
+
 ### Camera
 
-Unreal Engine style mouse camera.
+Hold the right mouse button to slide, hold the middle mouse button to look around.
 
-- Left drag: Locomotion
-- Right drag: Change viewing angle
-- Left and Right drag: Translate up/down/left/right
+## Roadmap
 
-Orbital Camera
-- CTRL + mouse: Orbit camera
-- Middle click + mouse: Pan camera
-- Mouse wheel: Zoom
+The big features:
 
-### Editing Tools
+- More material types (metal, dirt, water, color marker, custom marker...).
+- Selectable stamp size
+- Furniture meshes and markers
+- Multiple configurable passes (e.g. in pass 2, use 4×4×3 stamp and treat all voxels marked "wall" the same)
+- ...
+- Stress analysis on drawn/generated structues
 
-- `T`: Enter terraforming mode
-  - `Z`: create terrain
-  - `X`: remove terrain
-  - `1..4`: Select voxel type
-  - `UP`/`DOWN`: Increase/decrease brush radius
-- `D`: Enter face dragging mode
-  - Click two face corners, then drag the highlighted region
-- `U`: Undo last edit
-- `R`: Redo last undone edit
-- `Q`: Slicing mode: move mouse cursor to select voxel
-  - `Z`: Add voxel
-  - `X`: Clear voxel
-  - `1..4`: Select voxel type
-  - `M`: Raise selection level
-  - `N`: Lower selection level
+## TODO
 
-### Roadmap
+The paper cuts:
 
-- Generate world based on the template
-- Save template
-- Save world
-- Select voxel types using a mouse
-- Place voxels using the mouse
-- Camera that doesn't take over the mouse so badly
-- Stepwise generation
-- Inspect generator probabilities
-- Alter generated world while paused
+- Use Bevy 0.6
+- Use a renderer pipeline that can draw more than 4 materials
+- Stop inefficiencies in rendering
+- Generate in one step
+- Editing voxels in generator
+- Movable camera in generator
+- Select voxel in generator window
+- Voxel info in generator
+- Changing voxels in generator
+- Nicely visualised terrain borders
+- Saving generator output
+- Highlight low entropy tiles
+
+## Licensing
+
+There's a lot of MIT, Apache 2.0, and AGPL-3.0 code in *Domostroj*.

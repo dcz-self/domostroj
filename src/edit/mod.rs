@@ -45,7 +45,7 @@ pub type Shape = ConstPow2Shape<5, 5, 5>;
 
 /// A wrapper over a mundane chunk, for the purpose of becoming the Bevy resource.
 #[derive(Clone)]
-pub struct World(FlatPaddedGridCuboid<PaletteVoxel, Shape>);
+pub struct World(pub FlatPaddedGridCuboid<PaletteVoxel, Shape>);
 
 /// Create a default World with a grassy, diggable floor below level 0.
 pub fn floor() -> World {

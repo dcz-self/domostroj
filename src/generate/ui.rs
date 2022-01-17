@@ -54,7 +54,7 @@ fn process_panel(
         .show(egui_ctx, |ui| {
             ui.heading("Generator");
             if ui.button("Update stamps").clicked() {
-                events.send(generate::Event::StepOne).unwrap();
+                events.send(generate::Event::LoadStamps).unwrap();
             }
             if ui.button("1 Step").clicked() {
                 events.send(generate::Event::StepOne).unwrap();

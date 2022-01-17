@@ -16,6 +16,7 @@ mod immediate_mode;
 mod picking;
 mod plugin;
 mod stress;
+mod util;
 
 use camera::CursorRay;
 use cursor_tracker::{CursorPosition, CursorPositionPlugin};
