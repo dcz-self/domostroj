@@ -5,11 +5,13 @@ use baustein::re::ConstAnyShape;
 use baustein::world::FlatPaddedGridCuboid;
 use block_mesh;
 use block_mesh::MergeVoxel;
+use rand::rngs::StdRng;
 use wfc_3d as wfc;
 use wfc::wave;
 
 
 use baustein::traits::Space;
+use rand::SeedableRng;
 // this is actually used. Rustc is just complaining.
 use wfc_3d::palette::Palette as _;
 
@@ -59,6 +61,7 @@ pub type SceneShape = ConstAnyShape<10, 10, 10>;
 /// A wrapper over a mundane chunk, for the purpose of becoming the Bevy resource.
 pub struct World{
     pub wave: wave::Naive<SceneShape, 5>,
+    pub rng: StdRng,
 }
 
 /// Create a seed world with some collapse involved
@@ -73,7 +76,10 @@ pub fn seed() -> World {
         })
         .map(|v: Superposition| v.into())
         .into();
-    World { wave: wave::Naive::new(world) }
+    World {
+        wave: wave::Naive::new(world),
+        rng: StdRng::seed_from_u64(0),
+    }
 }
 
 /// Converts between wfc representation and the one for rendering.
