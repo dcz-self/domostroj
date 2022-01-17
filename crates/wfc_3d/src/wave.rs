@@ -49,7 +49,7 @@ impl<S: ConstShape, const C: u8> Naive<S, C> {
     fn get_beyond_opposite_corner(&self) -> Index {
         self.world.get_beyond_opposite_corner()
     }
-    fn get_extent(&self) -> Extent {
+    pub fn get_extent(&self) -> Extent {
         Extent::new(self.get_offset(), self.get_beyond_opposite_corner())
     }
 
@@ -97,7 +97,8 @@ impl<S: ConstShape, const C: u8> Naive<S, C> {
         index: Index,
         stamp: &ViewStamp<StampShape, SourceSpace>,
         stamps: &StampCollection<StampShape, SourceShape>,
-    ) -> Result<(), OutOfBounds> {
+    ) -> Result<bool, OutOfBounds> {
+        let mut ret = false;
         stamp.visit_indices(|stamp_index| {
             let voxel = stamp.get(stamp_index);
             let new = Superposition::<C>::only(voxel);
@@ -105,17 +106,21 @@ impl<S: ConstShape, const C: u8> Naive<S, C> {
             if new != self.get(index) {
                 println!("Collapsing {:?} to {}", index, voxel);
                 self.limit(index, new, stamps)?;
+                ret = true;
             }
             Ok(())
         })
+        .map(|()| ret)
     }
 
     /// Propagates collapse. Totally naive approach, depth-first.
+    /// Returns True if anything collapsed.
     pub fn collapse<StampShape: ConstShape, SourceShape: ConstShape>(
         &mut self,
         extent: &Extent,
         stamps: &StampCollection<StampShape, SourceShape>,
-    ) {
+    ) -> bool {
+        let mut ret = false;
         let stamp_extent = self.get_extent().get_stamps_extent::<StampShape>();
         for index in extent.intersection(&stamp_extent).iter() {
             let collapse = {
@@ -125,9 +130,10 @@ impl<S: ConstShape, const C: u8> Naive<S, C> {
             if let CollapseOutcomes::One(stamp) = collapse {
                 // This can only fail if the stamp is out of bounds,
                 // but we check it.
-                self.limit_stamp(index, stamp, stamps).unwrap();
+                ret = ret | self.limit_stamp(index, stamp, stamps).unwrap();
             }
         }
+        ret
     }
 
     pub fn into_space(self) -> FlatPaddedGridCuboid<Superposition<C>, S> {

@@ -113,7 +113,7 @@ type FPC<S, const C: u8> = FlatPaddedGridCuboid<Superposition<C>, S>;
 type SV<'a, StampShape, Shape, const C: u8> = ViewStamp<'a, StampShape, FlatPaddedGridCuboid<Superposition<C>, Shape>>;
 
 
-fn get_distribution<'a, 's, 't: 'a, SShape, TShape, StampShape, const C: u8> (
+pub fn get_distribution<'a, 's, 't: 'a, SShape, TShape, StampShape, const C: u8> (
     superposition: &'a SV<'s, StampShape, SShape, C>,
     stamps: &'t [(ST<'t, StampShape, TShape>, usize)],
 ) -> impl Iterator<Item=(&'t ST<'t, StampShape, TShape>, usize)> + 'a
@@ -128,7 +128,7 @@ fn get_distribution<'a, 's, 't: 'a, SShape, TShape, StampShape, const C: u8> (
 }
 
 #[derive(Debug, Clone, Copy)]
-enum PseudoEntropy {
+pub enum PseudoEntropy {
     /// No possible choices
     Impossible,
     /// Exactly one possible choice
@@ -157,7 +157,7 @@ enum PseudoEntropy {
 /// is lower entropy than the one which can accommodate all 3.
 ///
 /// PE(1/3, 1/3, 1/3) > PE(1/3, 1/3).
-fn get_superposition_pseudo_entropy<'s, 't, SShape, TShape, StampShape, const C: u8> (
+pub fn get_superposition_pseudo_entropy<'s, 't, SShape, TShape, StampShape, const C: u8> (
     superposition: &SV<'s, StampShape, SShape, C>,
     stamps: &[(ST<'t, StampShape, TShape>, usize)],
     total: usize,
@@ -173,6 +173,7 @@ fn get_superposition_pseudo_entropy<'s, 't, SShape, TShape, StampShape, const C:
     } else if possibilities_count == 1 {
         PseudoEntropy::Collapsed
     } else {
+        println!("possibilities {}", possibilities_count);
         PseudoEntropy::Open(get_pseudo_entropy(
             get_distribution(superposition, stamps)
                 .map(|(_stamp, occurrences)| occurrences),
@@ -465,6 +466,6 @@ mod test {
         dbg!(get_superposition_pseudo_entropy(&s([0, 1, 0]), &stamps, total));
         dbg!(get_superposition_pseudo_entropy(&s([1, 1, 1]), &stamps, total));
         let lowest = find_lowest_pseudo_entropy(&world, &stamps, total);
-        assert_eq!(lowest, Some([0, 1   , 0].into()));
+        assert_eq!(lowest, Some([0, 1, 0].into()));
     }
 }

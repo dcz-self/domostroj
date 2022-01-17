@@ -108,16 +108,24 @@ pub fn handle_events(
                         collapse::Stamps::rent(
                             stamps,
                             |stamps| {
+                                // This is kind of expensive,
+                                // but if we don't make sure all new collapses are resolved,
+                                // then the entropy finder is going to ignore them and cause nonsense results.
+                                if wave.collapse(&wave.get_extent(), stamps) == true {
+                                    return;
+                                }
                                 let candidate = wfc::find_lowest_pseudo_entropy(
                                     wave.get_world(),
                                     stamps.get_distribution(),
                                     stamps.get_total_occurrences(),
                                 );
+                                println!("Stamp index: {:?}", candidate);
                                 if let Some(index) = candidate {
                                     let stamp = wfc::find_preferred_stamp(
                                         wfc::stamp::ViewStamp::new(&wave.get_world(), index),
                                         &stamps,
                                     );
+                                    println!("Stamp content: {:?}", stamp);
                                     // Trigger collapse
                                     wave.limit_stamp(index, &stamp, &stamps).unwrap();
                                 }
