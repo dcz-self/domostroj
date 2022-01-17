@@ -143,7 +143,6 @@ fn generator_step(
     match &*stamps {
         StampsSource::None => {},
         StampsSource::Present3x3x3(stamps) => {
-            let wave = &mut world.wave;
             // This should probably be relegated to another thread,
             // but the other thread still needs mutable access to the same world
             // that is being rendered and interacted with.
@@ -156,23 +155,24 @@ fn generator_step(
                     // This is kind of expensive,
                     // but if we don't make sure all new collapses are resolved,
                     // then the entropy finder is going to ignore them and cause nonsense results.
-                    if wave.collapse(&wave.get_extent(), stamps) == true {
+                    if world.wave.collapse(&world.wave.get_extent(), stamps) == true {
                         return;
                     }
                     let candidate = wfc::find_lowest_pseudo_entropy(
-                        wave.get_world(),
+                        world.wave.get_world(),
                         stamps.get_distribution(),
                         stamps.get_total_occurrences(),
                     );
                     println!("Stamp index: {:?}", candidate);
                     if let Some(index) = candidate {
-                        let stamp = wfc::find_preferred_stamp(
-                            wfc::stamp::ViewStamp::new(&wave.get_world(), index),
+                        let stamp = wfc::choose_stamp_weighted(
+                            wfc::stamp::ViewStamp::new(&world.wave.get_world(), index),
                             &stamps,
+                            &mut world.rng,
                         );
                         println!("Stamp content: {:?}", stamp);
                         // Trigger collapse
-                        wave.limit_stamp(index, &stamp, &stamps).unwrap();
+                        world.wave.limit_stamp(index, &stamp, &stamps).unwrap();
                     }
                 },
             );
