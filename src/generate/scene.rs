@@ -57,7 +57,9 @@ pub type Superposition = wfc::palette::Superposition<Voxel, Palette, 5>;
 pub type SceneShape = ConstAnyShape<10, 10, 10>;
 
 /// A wrapper over a mundane chunk, for the purpose of becoming the Bevy resource.
-pub struct World(pub wave::Naive<SceneShape, 5>);
+pub struct World{
+    pub wave: wave::Naive<SceneShape, 5>,
+}
 
 /// Create a seed world with some collapse involved
 pub fn seed() -> World {
@@ -71,7 +73,7 @@ pub fn seed() -> World {
         })
         .map(|v: Superposition| v.into())
         .into();
-    World(wave::Naive::new(world))
+    World { wave: wave::Naive::new(world) }
 }
 
 /// Converts between wfc representation and the one for rendering.

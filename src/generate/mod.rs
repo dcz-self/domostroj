@@ -143,7 +143,7 @@ fn generator_step(
     match &*stamps {
         StampsSource::None => {},
         StampsSource::Present3x3x3(stamps) => {
-            let wave = &mut world.0;
+            let wave = &mut world.wave;
             // This should probably be relegated to another thread,
             // but the other thread still needs mutable access to the same world
             // that is being rendered and interacted with.
