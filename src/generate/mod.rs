@@ -82,6 +82,7 @@ pub enum StampsSource {
 pub enum Event {
     StepOne,
     LoadStamps,
+    Reset,
 }
 
 pub fn handle_events(
@@ -141,7 +142,10 @@ pub fn handle_events(
                     *stamps = StampsSource::Present3x3x3(time!(
                         collapse::Stamps::from_source(converted_source)
                     ));
-                }
+                },
+                Reset => {
+                    *world = scene::seed();
+                },
             }
         }
     }

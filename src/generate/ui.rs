@@ -56,6 +56,10 @@ fn process_panel(
 ) -> State {
     egui::SidePanel::left("side_panel")
         .show(egui_ctx, |ui| {
+            ui.heading("Scene");
+            if ui.button("Reset to seed").clicked() {
+                events.send(generate::Event::Reset).unwrap();
+            }
             ui.heading("Generator");
             if ui.button("1 Step").clicked() {
                 events.send(generate::Event::StepOne).unwrap();

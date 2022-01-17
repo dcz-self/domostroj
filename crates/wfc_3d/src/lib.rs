@@ -173,7 +173,7 @@ pub fn get_superposition_pseudo_entropy<'s, 't, SShape, TShape, StampShape, cons
     } else if possibilities_count == 1 {
         PseudoEntropy::Collapsed
     } else {
-        println!("possibilities {}", possibilities_count);
+        println!("possibilities {:?} {}", superposition.offset, possibilities_count);
         PseudoEntropy::Open(get_pseudo_entropy(
             get_distribution(superposition, stamps)
                 .map(|(_stamp, occurrences)| occurrences),
