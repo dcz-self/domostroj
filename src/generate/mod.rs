@@ -7,7 +7,7 @@ mod scene;
 mod ui;
 
 use crate::edit;
-use crate::util::time;
+use crate::time;
 
 use baustein;
 use baustein::prefab::{ PaletteIdChunk, PaletteVoxel };
@@ -31,6 +31,7 @@ use bevy_egui;
 use std::sync::Mutex;
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
+use std::time::Instant;
 use wfc_3d as wfc;
 
 // used traits

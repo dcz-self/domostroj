@@ -14,6 +14,8 @@ use std::thread;
 
 use crate::CursorRay;
 use crate::generate;
+use crate::generate::StampsSource;
+use crate::generate::collapse;
 use crate::generate::scene;
 
 
@@ -28,6 +30,7 @@ struct State {
 /// Draws UI and applies state changes.
 pub fn process(
     window_id: Res<generate::Window>,
+    stamps: Res<StampsSource>,
     mut egui_ctx: ResMut<EguiContext>,
     //mut slice_state: ResMut<slice::State>,
     events: Res<Mutex<Sender<generate::Event>>>,
@@ -38,7 +41,7 @@ pub fn process(
         Some(k) => k,
         None => {return;},
     };
-    let new_state = process_panel(ctx, old_state, &events);
+    let new_state = process_panel(ctx, &*stamps, old_state, &events);
     if new_state != old_state {
         //*slice_state = new_state.slice_state;
     }
@@ -47,17 +50,31 @@ pub fn process(
 /// Draws panel and sends messages.
 fn process_panel(
     egui_ctx: &egui::CtxRef,
+    stamps: &StampsSource,
     mut ui_state: State,
     mut events: &Sender<generate::Event>,
 ) -> State {
     egui::SidePanel::left("side_panel")
         .show(egui_ctx, |ui| {
             ui.heading("Generator");
-            if ui.button("Update stamps").clicked() {
-                events.send(generate::Event::LoadStamps).unwrap();
-            }
             if ui.button("1 Step").clicked() {
                 events.send(generate::Event::StepOne).unwrap();
+            }
+
+            ui.heading("Stamp source");
+            match stamps {
+                StampsSource::None => { ui.label("None"); },
+                StampsSource::Present3x3x3(source) => {
+                    ui.label("base: 3, height: 3");
+                    ui.label(format!(
+                        "distinct stamps: {}",
+                        collapse::Stamps::rent(source, |stamps| stamps.get_distribution().len()),
+                    ));
+                },
+            };
+
+            if ui.button("Update from editor").clicked() {
+                events.send(generate::Event::LoadStamps).unwrap();
             }
 
             ui.heading("Info");
