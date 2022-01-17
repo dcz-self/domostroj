@@ -70,6 +70,14 @@ impl<V, P: Palette<V>, const D: u8> From<crate::Superposition<D>>
     }
 }
 
+impl<V, P: Palette<V>, const D: u8> Into<crate::Superposition<D>>
+    for Superposition<V, P, D>
+{
+    fn into(self) -> crate::Superposition<D> {
+        self.voxel
+    }
+}
+
 impl<V: Copy, P: Palette<V>, const D: u8> From<&[V]>
     for Superposition<V, P, D>
 {

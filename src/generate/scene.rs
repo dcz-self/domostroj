@@ -6,9 +6,11 @@ use baustein::world::FlatPaddedGridCuboid;
 use block_mesh;
 use block_mesh::MergeVoxel;
 use wfc_3d as wfc;
+use wfc::wave;
 
 
 use baustein::traits::Space;
+// this is actually used. Rustc is just complaining.
 use wfc_3d::palette::Palette as _;
 
 
@@ -55,21 +57,21 @@ pub type Superposition = wfc::palette::Superposition<Voxel, Palette, 5>;
 pub type SceneShape = ConstAnyShape<64, 20, 64>;
 
 /// A wrapper over a mundane chunk, for the purpose of becoming the Bevy resource.
-#[derive(Clone)]
-pub struct World(pub FlatPaddedGridCuboid<Superposition, SceneShape>);
+pub struct World(pub wave::Naive<SceneShape, 5>);
 
 /// Create a seed world with some collapse involved
 pub fn seed() -> World {
     let extent = FlatPaddedGridCuboid::<(), SceneShape>::new([-32, -8, -32].into());
     use Voxel::*;
-    let world: FlatPaddedGridCuboid<Superposition, SceneShape>
+    let world: FlatPaddedGridCuboid<wfc::Superposition<5>, SceneShape>
         = extent.map_index(|i, _| {
             if i == [0,1,0].into() { [Empty].as_slice().into() }
             else if i == [0,0,0].into() { [Grass].as_slice().into() }
             else { Superposition::free() }
         })
+        .map(|v: Superposition| v.into())
         .into();
-    World(world)
+    World(wave::Naive::new(world))
 }
 
 /// Converts between wfc representation and the one for rendering.

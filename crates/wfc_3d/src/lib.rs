@@ -6,7 +6,7 @@
 mod extent;
 pub mod palette;
 pub mod stamp;
-mod wave;
+pub mod wave;
 
 use crate::stamp::{gather_stamps, StampCollection, StampSpace, ST, ViewStamp, Wrapping};
 use baustein::indices::Index;
@@ -184,7 +184,7 @@ fn get_superposition_pseudo_entropy<'s, 't, SShape, TShape, StampShape, const C:
 /// Returns the index of the template that has the lowest entropy
 /// in relation to possible stamp choices,
 /// or None if all are either undefined or 0.
-fn find_lowest_pseudo_entropy<'a, Shape, SourceShape, StampShape, const C: u8>(
+pub fn find_lowest_pseudo_entropy<'a, Shape, SourceShape, StampShape, const C: u8>(
     wave: &FPC<Shape, C>,
     stamps: &[(ST<'a, StampShape, SourceShape>, usize)],
     total: usize,
@@ -211,7 +211,7 @@ fn find_lowest_pseudo_entropy<'a, Shape, SourceShape, StampShape, const C: u8>(
 }
 
 /// Always chooses the allowed stamp with the most occurrences.
-fn find_preferred_stamp<'a, StampShape, SourceShape, WS, const D: u8>(
+pub fn find_preferred_stamp<'a, StampShape, SourceShape, WS, const D: u8>(
     wave_view: ViewStamp<StampShape, WS>,
     stamps: &'a StampCollection<'a, StampShape, SourceShape>,
 ) -> &'a ST<'a, StampShape, SourceShape>
@@ -248,7 +248,7 @@ pub fn execute<SourceShape, OutcomeShape, StampShape, const D: u8> (
     StampShape: ConstShape,
 {
     let stamps = StampCollection::<StampShape, _>::from_iter(gather_stamps(template, wrapping));
-    let mut wave = wave::Naive::new(seed, &stamps);
+    let mut wave = wave::Naive::new_collapse(seed, &stamps);
     loop {
         let candidate = find_lowest_pseudo_entropy(
             wave.get_world(),

@@ -24,7 +24,15 @@ pub struct Naive<S: ConstShape, const C: u8> {
 }
 
 impl<S: ConstShape, const C: u8> Naive<S, C> {
-    pub fn new<StampShape: ConstShape, SourceShape: ConstShape>(
+    // Not sure which constructor is a better idea.
+    // It probably makes sense to allow edition without collapsing.
+    pub fn new(
+        world: FlatPaddedGridCuboid<Superposition<C>, S>,
+    ) -> Self {
+        Self { world }
+    }
+
+    pub fn new_collapse<StampShape: ConstShape, SourceShape: ConstShape>(
         world: FlatPaddedGridCuboid<Superposition<C>, S>,
         stamps: &StampCollection<StampShape, SourceShape>,
     ) -> Self {

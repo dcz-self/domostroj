@@ -33,6 +33,7 @@ use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::time::Instant;
 use wfc_3d as wfc;
+use wfc::wave;
 
 // used traits
 use baustein::traits::{ MutChunk, Space };
@@ -86,6 +87,7 @@ pub enum Event {
 pub fn handle_events(
     source: Res<edit::World>,
     mut stamps: ResMut<StampsSource>,
+    mut world: ResMut<scene::World>,
     events: Res<Mutex<Receiver<Event>>>,
 ) {
     let events = events.try_lock();
@@ -93,7 +95,36 @@ pub fn handle_events(
         for event in events.try_iter() {
             use Event::*;
             match event {
-                StepOne => { println!("Step stub"); },
+                StepOne => match &*stamps {
+                    StampsSource::None => {},
+                    StampsSource::Present3x3x3(stamps) => {
+                        let mut wave = &mut world.0;
+                        // This should probably be relegated to another thread,
+                        // but the other thread still needs mutable access to the same world
+                        // that is being rendered and interacted with.
+                        // That means a copy-on-write world should be used,
+                        // because it lets the "base" reference read-only,
+                        // but until that happens, the only alternative is to copy the whole world.
+                        collapse::Stamps::rent(
+                            stamps,
+                            |stamps| {
+                                let candidate = wfc::find_lowest_pseudo_entropy(
+                                    wave.get_world(),
+                                    stamps.get_distribution(),
+                                    stamps.get_total_occurrences(),
+                                );
+                                if let Some(index) = candidate {
+                                    let stamp = wfc::find_preferred_stamp(
+                                        wfc::stamp::ViewStamp::new(&wave.get_world(), index),
+                                        &stamps,
+                                    );
+                                    // Trigger collapse
+                                    wave.limit_stamp(index, &stamp, &stamps).unwrap();
+                                }
+                            },
+                        );
+                    },
+                },
                 LoadStamps => {
                     let converted_source
                         = source.0

@@ -112,7 +112,7 @@ pub fn update_meshes(
     }
     // And create the occupied ones again.
     // Wasteful, I know. I'm testing!
-    let space = space.0.map(|v| Voxel(v));
+    let space = space.0.get_world().map(|v| Voxel(v.into()));
     let space = FlatPaddedGridCuboid::<Voxel, SceneShape>::new_from_space(&space, space.get_offset());
     let quads = generate_greedy_buffer_fast(&space);
     let material_lookup = |quad: &UnorientedQuad| {
